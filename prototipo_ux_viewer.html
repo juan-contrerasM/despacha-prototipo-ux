@@ -1,0 +1,2603 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Prototipo UX · Despacha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+<!-- Tailwind se carga al final del body, después del inventario de clases. -->
+<style>
+  :root { --bg:#161618; --line:#2a2a2e; --gold:#f5c542; --sky:#38bdf8; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { font-family: "Plus Jakarta Sans", sans-serif; color: #1e293b; background: #111; }
+  button, input, select, textarea { font-family: inherit; }
+  button { cursor: pointer; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid #0ea5e9; outline-offset: 2px; }
+  #app { height: 100%; display: flex; }
+  #sidebar { width: 318px; flex: none; background: var(--bg); color: #eee; display: flex; flex-direction: column; border-right: 1px solid #000; }
+  .brand { height: 58px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border-bottom: 1px solid var(--line); }
+  .brand b { display: block; font-size: 14px; }
+  .brand span { font-size: 11px; color: #a1a1aa; }
+  .mark { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg,#0f766e,#2dd4bf); display: grid; place-items: center; color: white; font-weight: 700; }
+  .side-scroll { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+  #screen-list { flex: 1; overflow: auto; padding-bottom: 16px; }
+  .sec { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #8b8b95; padding: 14px 14px 8px; }
+  .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 0 12px; }
+  .role-btn { border: 1px solid #34343a; background: #222226; color: #e4e4e7; border-radius: 10px; padding: 8px 8px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; text-align: left; }
+  .role-btn small { display: block; font-weight: 500; color: #a1a1aa; font-size: 10px; }
+  .role-btn.on { background: #0ea5e9; border-color: #0ea5e9; color: #082f49; }
+  .role-btn.on small { color: #0c4a6e; }
+  .role-btn.span { grid-column: 1 / -1; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 14px 0; font-size: 10px; color: #a1a1aa; }
+  .legend i { width: 7px; height: 7px; border-radius: 99px; display: inline-block; margin-right: 4px; }
+  .proc { position: sticky; top: 0; background: #161618; z-index: 2; padding: 10px 14px 4px; }
+  .proc b { display: block; font-size: 11px; letter-spacing: .04em; }
+  .proc span { font-size: 10px; color: #8b8b95; }
+  .screen-btn { width: calc(100% - 16px); margin: 2px 8px; display: flex; gap: 8px; align-items: center; padding: 7px 8px; border-radius: 8px; color: #f4f4f5; background: transparent; border: 0; text-align: left; }
+  .screen-btn:hover { background: #232328; }
+  .screen-btn.active { background: #2a2a31; box-shadow: inset 2px 0 0 #38bdf8; }
+  .screen-btn.dim { opacity: .38; }
+  .screen-btn .nm { flex: 1; font-size: 12.5px; line-height: 1.2; }
+  .tag-ui { background: var(--gold); color: #1c1917; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 10px; font-weight: 600; border-radius: 4px; padding: 2px 4px; flex: none; }
+  .rdot { width: 7px; height: 7px; border-radius: 99px; display: inline-block; }
+  .c-cliente { background: #38bdf8; } .c-despachador { background: #34d399; } .c-repartidor { background: #fb7185; } .c-soporte { background: #c084fc; }
+  #workspace { flex: 1; min-width: 0; display: flex; flex-direction: column; background: #ececee; }
+  #topbar { background: #f8f8f7; border-bottom: 1px solid #e4e4e7; padding: 8px 12px; display: flex; align-items: center; gap: 10px; }
+  .ib { width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e4e4e7; background: #fff; color: #334155; }
+  .ib:disabled { opacity: .35; }
+  #flows { display: flex; gap: 6px; overflow: auto; padding: 6px 12px; background: #f8f8f7; border-bottom: 1px solid #eee; }
+  .flow-chip { flex: none; font-size: 12px; background: #fff; border: 1px dashed #7dd3fc; color: #0f172a; border-radius: 999px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px; }
+  .flow-chip em { color: #0284c7; font-style: normal; font-weight: 700; }
+  #hint { font-size: 12px; color: #64748b; padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #canvas { flex: 1; min-height: 0; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 18px; background-color: #d8d8de; background-image: radial-gradient(#c2c2c8 1.1px, transparent 1.1px); background-size: 18px 18px; }
+  .device.desktop { width: min(1120px, 100%); height: min(740px, calc(100vh - 128px)); min-height: 520px; background: #fff; border-radius: 14px; box-shadow: 0 24px 60px rgba(15,23,42,.18); display: flex; flex-direction: column; overflow: hidden; position: relative; flex: none; }
+  #canvas.fit-phone { overflow: hidden; }
+  .device.phone { width: 402px; height: 852px; min-height: 0; padding: 0; background: transparent; border-radius: 0; box-shadow: none; position: relative; flex: none; overflow: hidden; }
+  .ph-scale { width: 402px; height: 852px; transform-origin: top left; }
+  .ph-shell { width: 390px; height: 828px; margin: 12px auto; background: linear-gradient(180deg, #3a3f4a 0%, #1a1d24 14%, #0c0e12 100%); border-radius: 48px; padding: 12px; position: relative; box-shadow: inset 0 0 0 1px rgba(255,255,255,.22), inset 0 0 0 3px #07080b, 0 28px 60px rgba(15,23,42,.38); }
+  .ph-btn { position: absolute; width: 3px; border-radius: 2px; background: linear-gradient(#6b7280, #2e333d); }
+  .ph-btn.silent { left: -3px; top: 112px; height: 24px; }
+  .ph-btn.up { left: -3px; top: 152px; height: 48px; }
+  .ph-btn.down { left: -3px; top: 210px; height: 48px; }
+  .ph-btn.power { left: auto; right: -3px; top: 176px; height: 74px; }
+  .ph-island { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 118px; height: 32px; background: #0b0d12; border-radius: 20px; z-index: 4; pointer-events: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+  .ph-island:after { content: ""; position: absolute; right: 16px; top: 10px; width: 11px; height: 11px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #4b6280, #0b1220 62%); box-shadow: 0 0 0 2px #161a22; }
+  .ph-home { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); width: 124px; height: 5px; border-radius: 99px; background: rgba(15,23,42,.5); z-index: 4; pointer-events: none; }
+  .device.phone .device-body::-webkit-scrollbar, .device.phone .device-body *::-webkit-scrollbar { width: 0; height: 0; }
+  .deskbar { height: 36px; background: #eceff1; display: flex; align-items: center; gap: 6px; padding: 0 12px; flex: none; }
+  .deskbar i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+  .deskbar em { margin-left: 8px; font-style: normal; font-size: 12px; color: #64748b; background: #fff; border-radius: 6px; padding: 3px 10px; }
+  .device-body { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; background: #fff; }
+  .device.phone .device-body { height: 100%; border-radius: 36px; overflow: hidden; position: relative; background: #fff; }
+  .device.phone .device-body > .screen, .device.desktop .device-body > .screen { flex: 1; min-height: 0; }
+  .device.phone .device-body > .screen { height: auto; min-width: 0; }
+  .ph-status { height: 48px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; font-size: 12px; font-weight: 650; color: #1e293b; background: #fff; position: relative; z-index: 3; }
+  .ph-status .ph-sig { display: flex; align-items: center; gap: 6px; }
+  .device.phone .hidden, .sm-shot.phone .hidden { display: none; }
+  .device.phone .md\:grid-cols-2, .device.phone .md\:grid-cols-3, .device.phone .md\:grid-cols-4, .device.phone .md\:grid-cols-5,
+  .device.phone .lg\:grid-cols-2, .device.phone .lg\:grid-cols-3, .device.phone .lg\:grid-cols-5, .device.phone .sm\:grid-cols-2,
+  .sm-shot.phone .md\:grid-cols-2, .sm-shot.phone .md\:grid-cols-3, .sm-shot.phone .md\:grid-cols-4, .sm-shot.phone .md\:grid-cols-5,
+  .sm-shot.phone .lg\:grid-cols-2, .sm-shot.phone .lg\:grid-cols-3, .sm-shot.phone .lg\:grid-cols-5, .sm-shot.phone .sm\:grid-cols-2 { grid-template-columns: minmax(0, 1fr); }
+  .device.phone .grid-cols-2, .sm-shot.phone .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .device.phone .grid-cols-3, .sm-shot.phone .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .device.phone .md\:col-span-2, .device.phone .md\:col-span-3, .device.phone .lg\:col-span-2, .device.phone .lg\:col-span-3,
+  .sm-shot.phone .md\:col-span-2, .sm-shot.phone .md\:col-span-3, .sm-shot.phone .lg\:col-span-2, .sm-shot.phone .lg\:col-span-3 { grid-column: auto; }
+  .device.phone .overflow-auto, .sm-shot.phone .overflow-auto { max-width: 100%; }
+  .device.phone .appbar, .sm-shot.phone .appbar { height: auto; display: flex; flex-direction: column; gap: 0; padding: 0; background: #fff; border-bottom: 0; box-shadow: 0 1px 0 #e7eef0; }
+  .appbar-top { height: 48px; display: flex; align-items: center; gap: 8px; padding: 0 14px; }
+  .appbar-top .brand-name { font-size: 15px; font-weight: 700; color: #134e4a; letter-spacing: -.02em; }
+  .device.phone .appbar nav, .sm-shot.phone .appbar nav { display: flex; gap: 6px; overflow: auto; padding: 0 12px 10px; min-width: 0; }
+  .device.phone .appbar .navlink, .sm-shot.phone .appbar .navlink { flex: none; height: 32px; padding: 0 11px; border-radius: 999px; background: #f1f5f9; color: #475569; font-size: 12px; font-weight: 700; gap: 6px; }
+  .device.phone .appbar .navlink i, .sm-shot.phone .appbar .navlink i { font-size: 11px; }
+  .device.phone .appbar .navlink.on, .sm-shot.phone .appbar .navlink.on { background: #0f766e; color: #fff; }
+  .device.phone .page, .sm-shot.phone .page { padding: 16px 16px 28px; }
+  .device.phone .page > .flex, .sm-shot.phone .page > .flex { flex-direction: column; align-items: stretch; gap: 10px; margin-bottom: 14px; }
+  .device.phone .screen h1, .sm-shot.phone .screen h1 { letter-spacing: -.03em; line-height: 1.15; }
+  .device.phone .card, .sm-shot.phone .card { border-color: #e8eef2; border-radius: 16px; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+  .device.phone .inp, .device.phone .sel, .device.phone .area, .sm-shot.phone .inp, .sm-shot.phone .sel, .sm-shot.phone .area { min-height: 44px; border-radius: 12px; border-color: #e2e8f0; background: #f8fafc; padding: 10px 12px; }
+  .device.phone .inp:focus, .device.phone .sel:focus, .device.phone .area:focus { border-color: #0f766e; background: #fff; box-shadow: 0 0 0 3px rgba(15,118,110,.12); outline: none; }
+  .device.phone .btn, .sm-shot.phone .btn { min-height: 42px; border-radius: 12px; }
+  .device.phone .btn-primary, .sm-shot.phone .btn-primary { box-shadow: 0 1px 2px rgba(15,118,110,.28); }
+  .device.phone .btn.w-full, .sm-shot.phone .btn.w-full { width: 100%; }
+  .device.phone .relative > .icon-btn.absolute { top: 4px; }
+  .device.phone table, .sm-shot.phone table { font-size: 12px; border-collapse: collapse; }
+  .device.phone .card:has(table), .sm-shot.phone .card:has(table) { overflow-x: auto; }
+  .device.phone th, .sm-shot.phone th { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: #64748b; font-weight: 700; }
+  .device.phone td, .device.phone th, .sm-shot.phone td, .sm-shot.phone th { padding: 10px 8px; white-space: nowrap; }
+  .device.phone tbody tr, .sm-shot.phone tbody tr { border-top: 1px solid #f1f5f9; }
+  .device.phone .screen > .flex.items-center, .sm-shot.phone .screen > .flex.items-center { align-items: flex-start; padding-top: 8px; }
+  .tabbar { box-shadow: 0 -1px 0 #e8eef0; padding: 4px 6px 16px; background: #fff; }
+  .tabitem { flex: 1; border: 0; background: transparent; padding: 6px 0 2px; font-size: 11px; font-weight: 700; color: #94a3b8; border-radius: 12px; }
+  .tabitem i { display: block; font-size: 16px; margin-bottom: 2px; }
+  .tabitem.on { color: #0f766e; background: #f0fdfa; }
+  .user-list { display: flex; flex-direction: column; }
+  .user-row { padding: 14px 14px 12px; border-top: 1px solid #f1f5f9; }
+  .user-row:first-child { border-top: 0; }
+  .user-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .user-top b { font-size: 15px; letter-spacing: -.02em; }
+  .user-mail { margin-top: 2px; font-size: 12px; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-meta { display: flex; gap: 8px; margin-top: 6px; font-size: 12px; color: #475569; }
+  .user-meta span:last-child { margin-left: auto; color: #94a3b8; }
+  .user-perms { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .user-perms em { font-style: normal; font-size: 11px; font-weight: 650; background: #f1f5f9; color: #334155; border-radius: 999px; padding: 3px 8px; }
+  .user-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .user-acts .btn { min-height: 36px; padding: 6px 10px; font-size: 12.5px; }
+  .stop-bar { position: sticky; bottom: 0; z-index: 2; display: flex; gap: 8px; background: #fff; padding: 10px 0 4px; box-shadow: 0 -10px 14px #fff; }
+  .stop-bar .btn, .pair-acts .btn { flex: 1; min-width: 0; }
+  .pair-acts { display: flex; gap: 8px; }
+  .pod-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+  .pod-actions, .sign-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .pod-actions .btn, .sign-actions .btn { width: 100%; min-width: 0; }
+  .pod-actions .btn:first-child { grid-column: 1 / -1; }
+  .pod-note { margin: 14px 0 8px; font-size: 12px; color: #64748b; }
+  .map-wrap { position: relative; border-radius: 12px; overflow: hidden; background: #e7efe4; border: 1px solid #d6e2d6; }
+  .map-wrap svg { width: 100%; height: 100%; display: block; }
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; }
+  .lbl { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 4px; }
+  .inp, .sel, .area { width: 100%; border: 1px solid #cbd5e1; border-radius: 10px; padding: 8px 10px; font-size: 14px; background: #fff; color: #0f172a; }
+  .area { min-height: 78px; resize: vertical; }
+  .btn { border-radius: 10px; padding: 8px 12px; font-weight: 650; font-size: 13.5px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; line-height: 1.2; }
+  .btn-primary { background: #0f766e; color: #fff; }
+  .btn-primary:hover { background: #115e59; }
+  .btn-secondary { background: #fff; border-color: #cbd5e1; color: #0f172a; }
+  .btn-secondary:hover { background: #f8fafc; }
+  .btn-danger { background: #e11d48; color: #fff; }
+  .btn-ghost { background: transparent; color: #0f766e; padding-left: 4px; padding-right: 4px; }
+  .btn-dark { background: #0f172a; color: #fff; }
+  .icon-btn { width: 36px; height: 36px; border-radius: 10px; border: 0; background: transparent; color: #334155; }
+  .icon-btn:hover { background: #f1f5f9; }
+  .navlink { padding: 6px 10px; border-radius: 9px; font-size: 13px; font-weight: 650; color: #475569; display: inline-flex; gap: 6px; align-items: center; background: transparent; border: 0; }
+  .navlink.on, .navlink:hover { background: #f0fdfa; color: #0f766e; }
+  .avatar { width: 32px; height: 32px; border-radius: 99px; background: #ccfbf1; color: #115e59; display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+  .logo { width: 26px; height: 26px; border-radius: 8px; background: #0f766e; color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+  .pill { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 8px; display: inline-flex; align-items: center; }
+  .st-pend { background: #fef3c7; color: #92400e; } .st-ruta { background: #dbeafe; color: #1d4ed8; }
+  .st-ok { background: #d1fae5; color: #065f46; } .st-late { background: #ffe4e6; color: #be123c; }
+  .st-can { background: #e2e8f0; color: #334155; } .st-exp { background: #fee2e2; color: #991b1b; }
+  .st-alta { background: #ffedd5; color: #9a3412; } .st-norm { background: #e0f2fe; color: #075985; }
+  .switch { width: 42px; height: 24px; background: #cbd5e1; border-radius: 999px; position: relative; border: 0; flex: none; }
+  .switch.on { background: #0f766e; }
+  .switch:after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: #fff; border-radius: 99px; transition: .15s; }
+  .switch.on:after { left: 21px; }
+  .tab { border: 0; background: transparent; padding: 8px 12px; font-weight: 700; font-size: 13px; color: #64748b; border-bottom: 2px solid transparent; }
+  .tab.on { color: #0f766e; border-bottom-color: #0f766e; }
+  .overlay { position: absolute; inset: 0; background: rgba(15,23,42,.45); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
+  .sheet { background: #fff; border-radius: 16px; padding: 16px; width: min(420px, 100%); max-width: 100%; min-width: 0; box-sizing: border-box; box-shadow: 0 20px 50px rgba(0,0,0,.2); }
+  .sheet .btn { max-width: 100%; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+  .acct { width: 100%; min-width: 0; display: flex; align-items: center; gap: 10px; text-align: left; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px 12px; color: #0f172a; }
+  .acct:hover { border-color: #0f766e; background: #f0fdfa; }
+  .acct-txt { min-width: 0; flex: 1; }
+  .acct-txt b { display: block; font-size: 14px; }
+  .acct-txt small { display: block; margin-top: 1px; font-size: 12px; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(12px); background: #111827; color: #fff; padding: 10px 14px; border-radius: 12px; opacity: 0; pointer-events: none; transition: .2s; z-index: 70; font-size: 13.5px; max-width: min(520px, calc(100% - 40px)); }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #js-error:empty { display: none; }
+  #js-error { position: fixed; top: 8px; right: 8px; background: #fecaca; color: #7f1d1d; padding: 8px 10px; border-radius: 8px; z-index: 80; max-width: 440px; font-size: 12px; }
+  .lock { color: #94a3b8; }
+  .row-link { width: 100%; text-align: left; background: #fff; border: 0; border-bottom: 1px solid #f1f5f9; }
+  .row-link:hover { background: #f8fafc; }
+  .key { width: 64px; height: 48px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; font-weight: 700; font-size: 18px; }
+  .key:hover { background: #f8fafc; }
+  .hbar { height: 8px; border-radius: 99px; background: #e2e8f0; overflow: hidden; }
+  .hbar > span { display: block; height: 100%; background: #0f766e; }
+  .drag li { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; }
+  .drag li.over { border-color: #0f766e; }
+  .screen-in { animation: rise .18s ease; }
+  @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  #btn-map { width: auto; padding: 0 10px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+  #flow-map { display: none; position: fixed; inset: 0; z-index: 90; background: #101114; color: #f4f4f5; flex-direction: column; }
+  #flow-map.open { display: flex; }
+  .fm-bar { height: 58px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 14px; border-bottom: 1px solid #2a2a2e; background: #161618; }
+  .fm-bar h2 { font-size: 14px; margin: 0; }
+  .fm-bar p { margin: 0; font-size: 11px; color: #a1a1aa; }
+  .fm-search { background: #222226; border: 1px solid #34343a; color: #fff; border-radius: 9px; padding: 7px 10px; width: 220px; font-size: 13px; }
+  .fm-tool { height: 32px; border-radius: 8px; border: 1px solid #34343a; background: #222226; color: #eee; padding: 0 10px; font-size: 12px; font-weight: 650; }
+  .fm-tool.on { background: #0ea5e9; color: #082f49; border-color: #0ea5e9; }
+  .fm-body { flex: 1; min-height: 0; display: flex; }
+  #fm-view { flex: 1; min-width: 0; overflow: hidden; cursor: grab; background-color: #1b1c20; background-image: radial-gradient(#2e2f35 1.1px, transparent 1.1px); background-size: 18px 18px; position: relative; touch-action: none; }
+  #fm-view.grabbing { cursor: grabbing; }
+  #fm-world { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+  #fm-svg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; z-index: 0; }
+  #fm-cols { position: relative; z-index: 1; display: flex; gap: 88px; padding: 28px 40px 56px; }
+  .fm-col { width: 220px; flex: none; }
+  .fm-col header { margin-bottom: 12px; }
+  .fm-col header b { display: block; font-size: 12px; letter-spacing: .04em; }
+  .fm-col header span { font-size: 10px; color: #a1a1aa; }
+  .fm-node { width: 100%; text-align: left; background: #23242a; border: 1px solid #3a3b42; border-radius: 12px; padding: 8px 10px; margin-bottom: 14px; color: #f8fafc; display: flex; flex-direction: column; gap: 3px; position: relative; }
+  .fm-node:hover { border-color: #7dd3fc; }
+  .fm-node .fm-name { font-size: 13px; font-weight: 700; line-height: 1.25; }
+  .fm-node .fm-meta { font-size: 10px; color: #a1a1aa; }
+  .fm-node.fm-on { border-color: #f5c542; box-shadow: 0 0 0 2px #f5c542; }
+  .fm-node.fm-hot { border-color: #38bdf8; }
+  .fm-node.fm-quiet { opacity: .38; }
+  .fm-node.fm-dim { opacity: .28; }
+  .fm-node.fm-miss { opacity: .12; }
+  #fm-detail { width: 320px; flex: none; border-left: 1px solid #2a2a2e; background: #161618; overflow: auto; padding: 16px; }
+  .fm-link { width: 100%; text-align: left; background: #23242a; border: 1px solid #34343a; border-radius: 10px; padding: 8px 10px; color: #eee; margin-bottom: 6px; }
+  .fm-link:hover { border-color: #7dd3fc; }
+  .fm-link small { display: block; color: #93c5fd; font-size: 11px; }
+  .fm-link.home small { color: #fcd34d; }
+  .fm-link.on { border-color: #f5c542; box-shadow: 0 0 0 1px #f5c542; background: #2a2618; }
+  #fm-svg path { pointer-events: stroke; cursor: pointer; }
+  #btn-visual { width: auto; padding: 0 10px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+  #screen-map { display: none; position: fixed; inset: 0; z-index: 92; background: #e6e7eb; color: #0f172a; flex-direction: column; }
+  #screen-map.open { display: flex; }
+  .sm-bar { height: 54px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: #f8f8f7; border-bottom: 1px solid #e4e4e7; }
+  .sm-bar h2 { margin: 0; font-size: 14px; }
+  .sm-bar p { margin: 0; font-size: 11px; color: #64748b; }
+  .sm-tool { height: 32px; border-radius: 8px; border: 1px solid #e4e4e7; background: #fff; color: #0f172a; padding: 0 10px; font-size: 12px; font-weight: 700; }
+  #sm-view { flex: 1; min-height: 0; overflow: hidden; cursor: grab; position: relative; touch-action: none; background-color: #e6e7eb; background-image: radial-gradient(#c9ccd3 1.1px, transparent 1.1px); background-size: 18px 18px; }
+  #sm-view.grabbing { cursor: grabbing; }
+  #sm-world { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+  #sm-svg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; z-index: 2; }
+  #sm-cols { position: relative; z-index: 1; display: flex; gap: 110px; padding: 36px 48px 64px; align-items: flex-start; }
+  .sm-col { width: 280px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 28px; }
+  .sm-col header { align-self: stretch; }
+  .sm-col header b { display: block; font-size: 12px; }
+  .sm-col header span { font-size: 10px; color: #64748b; }
+  .sm-node { background: transparent; border: 0; padding: 0; text-align: left; cursor: pointer; display: block; }
+  .sm-cap { font-size: 11px; color: #334155; margin-bottom: 6px; font-weight: 650; }
+  .sm-cap em { font-style: normal; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 10px; background: #f5c542; color: #1c1917; border-radius: 4px; padding: 1px 4px; margin-right: 4px; }
+  .sm-shot { background: #fff; overflow: hidden; box-shadow: 0 14px 34px rgba(15,23,42,.16), 0 0 0 1px rgba(15,23,42,.05); }
+  .sm-shot.desk { width: 252px; height: 164px; border-radius: 10px; }
+  .sm-shot.phone { width: 132px; height: 268px; border-radius: 22px; box-shadow: 0 14px 34px rgba(15,23,42,.2), 0 0 0 7px #16181d; }
+  .sm-shot.desk .sm-live { width: 1100px; height: 720px; transform: scale(0.2291); transform-origin: 0 0; pointer-events: none; }
+  .sm-shot.phone .sm-live { width: 390px; height: 800px; transform: scale(0.3385); transform-origin: 0 0; pointer-events: none; }
+  .sm-node.on .sm-shot { outline: 3px solid #0ea5e9; outline-offset: 3px; }
+  @media (max-width: 860px) {
+    #sidebar { width: 250px; }
+    .brand span, .role-btn small, .proc span { display: none; }
+    #fm-detail { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="mark">D</div>
+      <div><b>Prototipo UX</b><span>Despacha · 38 pantallas · 7 procesos</span></div>
+    </div>
+    <div class="side-scroll" id="side-scroll">
+      <div class="sec">Modos de visualización</div>
+      <div class="role-grid" id="roles"></div>
+      <div class="legend">
+        <span><i class="c-cliente"></i>Cliente</span>
+        <span><i class="c-despachador"></i>Despachador</span>
+        <span><i class="c-repartidor"></i>Repartidor</span>
+        <span><i class="c-soporte"></i>Soporte</span>
+      </div>
+      <div class="sec">Pantallas</div>
+      <div id="screen-list"></div>
+    </div>
+  </aside>
+  <section id="workspace">
+    <header id="topbar">
+      <button class="ib" id="btn-back" type="button" title="Pantalla anterior"><i class="fa-solid fa-arrow-left"></i></button>
+      <button class="ib" id="btn-fwd" type="button" title="Pantalla siguiente"><i class="fa-solid fa-arrow-right"></i></button>
+      <button class="ib" id="btn-map" type="button" title="Mapa de interacción: cómo se conectan las pantallas"><i class="fa-solid fa-sitemap"></i> Mapa de interacción</button>
+      <button class="ib" id="btn-visual" type="button" title="Mapa visual: las pantallas en miniatura y sus flechas"><i class="fa-solid fa-table-cells"></i> Mapa visual</button>
+      <span class="tag-ui" id="tb-id">UI-001</span>
+      <div style="min-width:0">
+        <div id="tb-title" style="font-weight:700;font-size:14px">Inicio de sesión</div>
+        <div id="tb-sub" style="font-size:11px;color:#64748b"></div>
+      </div>
+      <div id="hint" style="margin-left:auto"></div>
+      <span id="tb-device" class="pill st-norm"></span>
+    </header>
+    <div id="flows"></div>
+    <div id="canvas"><div id="device"></div></div>
+  </section>
+</div>
+<div id="flow-map" aria-hidden="true">
+  <header class="fm-bar">
+    <div>
+      <h2>Mapa de interacción</h2>
+      <p id="fm-count">Conexiones del prototipo</p>
+    </div>
+    <input id="fm-search" class="fm-search" type="search" placeholder="Buscar pantalla o UI-000" aria-label="Buscar en el mapa">
+    <button type="button" class="fm-tool" id="fm-labels">Etiquetas</button>
+    <button type="button" class="fm-tool" id="fm-out" title="Alejar">−</button>
+    <button type="button" class="fm-tool" id="fm-in" title="Acercar">+</button>
+    <button type="button" class="fm-tool" id="fm-fit">Ajustar</button>
+    <button type="button" class="fm-tool" id="fm-close" style="margin-left:auto">Cerrar</button>
+  </header>
+  <div class="fm-body">
+    <div id="fm-view">
+      <div id="fm-world">
+        <svg id="fm-svg"></svg>
+        <div id="fm-cols"></div>
+      </div>
+    </div>
+    <aside id="fm-detail"></aside>
+  </div>
+</div>
+<div id="screen-map" aria-hidden="true">
+  <header class="sm-bar">
+    <div>
+      <h2>Mapa visual</h2>
+      <p>Las 38 pantallas, como se ven, unidas por sus saltos. Arrastra el fondo. Doble clic abre la pantalla.</p>
+    </div>
+    <button type="button" class="sm-tool" id="sm-out" title="Alejar">−</button>
+    <button type="button" class="sm-tool" id="sm-in" title="Acercar">+</button>
+    <button type="button" class="sm-tool" id="sm-fit">Ajustar</button>
+    <button type="button" class="sm-tool" id="sm-close" style="margin-left:auto">Cerrar</button>
+  </header>
+  <div id="sm-view">
+    <div id="sm-world">
+      <svg id="sm-svg"></svg>
+      <div id="sm-cols"></div>
+    </div>
+  </div>
+</div>
+<div id="toast" role="status"></div>
+<div id="js-error"></div>
+<div id="tw-safelist" style="display:none" class="-ml-2 -mt-2 absolute bg-[#f4f7f6] bg-amber-50 bg-emerald-50 bg-gradient-to-br bg-rose-600 bg-slate-50 bg-teal-50 bg-teal-900 bg-white block border-2 border-amber-100 border-b border-dashed border-emerald-100 border-l-2 border-slate-100 border-slate-200 border-slate-300 border-t border-teal-100 bottom-0 cursor-pointer flex flex-1 flex-col flex-wrap font-bold font-mono font-semibold from-amber-100 gap-0.5 gap-1 gap-2 gap-3 gap-4 grid grid-cols-2 grid-cols-3 h-12 h-14 h-16 h-28 h-32 h-36 h-40 h-fit h-full hidden hover:bg-slate-50 hover:border-teal-300 items-center items-end items-start justify-between justify-center justify-items-center leading-tight lg:col-span-2 lg:col-span-3 lg:grid-cols-2 lg:grid-cols-3 lg:grid-cols-5 max-w-3xl max-w-4xl max-w-lg max-w-md max-w-sm max-w-xl mb-0.5 mb-1 mb-2 mb-3 mb-4 mb-5 mb-6 md:block md:col-span-2 md:col-span-3 md:flex md:grid-cols-2 md:grid-cols-3 md:grid-cols-4 md:grid-cols-5 md:p-10 md:p-6 min-h-0 min-w-[200px] ml-2 ml-auto mr-2 mt-1 mt-2 mt-3 mt-4 mt-6 mx-auto my-2 overflow-auto p-1 p-2 p-3 p-4 p-5 p-6 p-8 pb-1 pb-2 pb-3 pl-3 pl-4 place-items-center pr-10 pr-3 pt-2 pt-3 px-1 px-2 px-3 px-4 py-1 py-2 py-4 relative right-0 right-1 rounded-lg rounded-xl shadow-xl shrink-0 sm:block sm:grid-cols-2 space-x-1 space-y-1 space-y-2 space-y-3 space-y-4 sticky text-2xl text-3xl text-[11px] text-amber-500 text-amber-700 text-amber-800 text-base text-blue-800 text-center text-emerald-700 text-emerald-800 text-left text-lg text-rose-600 text-slate-400 text-slate-500 text-slate-600 text-slate-700 text-slate-900 text-sm text-teal-100 text-teal-50 text-teal-600 text-teal-700 text-teal-800 text-teal-900 text-white text-xl text-xs to-slate-300 top-0.5 top-12 touch-none w-12 w-16 w-52 w-auto w-full z-30 border ml-4 ring-2 ring-teal-600 opacity-30 opacity-40 opacity-60 line-through text-rose-700 bg-rose-50 bg-amber-100 bg-slate-100 overflow-hidden inline-flex"></div>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<script>
+const PROCESSES = [
+  { id:"A", name:"Registro y autenticación", range:"UI-001 – UI-005", req:"REQ1–4", screens:["UI-001","UI-002","UI-003","UI-004","UI-005"] },
+  { id:"B", name:"Pedidos: creación", range:"UI-006 – UI-011", req:"REQ5, 24–27, 33", screens:["UI-006","UI-007","UI-008","UI-009","UI-010","UI-011"] },
+  { id:"C", name:"Pedidos: modificación y pago", range:"UI-012 – UI-016", req:"REQ21, 22, 28, 34", screens:["UI-012","UI-013","UI-014","UI-015","UI-016"] },
+  { id:"D", name:"Despacho y optimización", range:"UI-017 – UI-022", req:"REQ6, 19, 20, 30–32", screens:["UI-017","UI-018","UI-019","UI-020","UI-021","UI-022"] },
+  { id:"E", name:"App del repartidor", range:"UI-023 – UI-028", req:"REQ7, 9–11, 23, 29", screens:["UI-023","UI-024","UI-025","UI-026","UI-027","UI-028"] },
+  { id:"F", name:"Seguimiento y notificaciones", range:"UI-029 – UI-034", req:"REQ8, 12–16", screens:["UI-029","UI-030","UI-031","UI-032","UI-033","UI-034"] },
+  { id:"G", name:"Soporte y administración", range:"UI-035 – UI-038", req:"REQ17, 18, 35, 36", screens:["UI-035","UI-036","UI-037","UI-038"] }
+];
+const META = {
+  "UI-001":["Inicio de sesión","A",["cliente","despachador","repartidor","soporte"],"REQ1"],
+  "UI-002":["Recuperar contraseña","A",["cliente","despachador","repartidor","soporte"],"REQ2"],
+  "UI-003":["Crear usuario","A",["cliente","despachador","repartidor","soporte"],"REQ3"],
+  "UI-004":["Home","A",["cliente","despachador","repartidor","soporte"],"Vista de inicio"],
+  "UI-005":["Perfil","A",["cliente","despachador","repartidor","soporte"],"REQ4"],
+  "UI-006":["Historial de pedidos","B",["cliente"],"REQ33"],
+  "UI-007":["Crear pedido","B",["cliente"],"REQ5"],
+  "UI-008":["Cotizador de envío","B",["cliente"],"REQ24"],
+  "UI-009":["Cobertura de servicio","B",["cliente"],"REQ25"],
+  "UI-010":["Importar pedidos","B",["cliente","despachador"],"REQ26"],
+  "UI-011":["Plantillas de pedidos","B",["cliente"],"REQ27"],
+  "UI-012":["Detalle de pedido","C",["cliente","despachador","soporte"],"Vista de detalle"],
+  "UI-013":["Modificar pedido","C",["cliente"],"REQ21"],
+  "UI-014":["Cancelar pedido","C",["cliente"],"REQ22"],
+  "UI-015":["Reprogramar entrega","C",["cliente","despachador"],"REQ28"],
+  "UI-016":["Pago y comprobante","C",["cliente"],"REQ34"],
+  "UI-017":["Dashboard operativo","D",["despachador"],"REQ31"],
+  "UI-018":["Asignar pedido","D",["despachador"],"REQ6"],
+  "UI-019":["Reasignar pedido","D",["despachador"],"REQ32"],
+  "UI-020":["Agrupación en lotes","D",["despachador"],"REQ19"],
+  "UI-021":["Prioridad y SLA","D",["despachador"],"REQ20"],
+  "UI-022":["Flota de vehículos","D",["despachador"],"REQ30"],
+  "UI-023":["Mi turno","E",["repartidor"],"REQ29"],
+  "UI-024":["Mi ruta de hoy","E",["repartidor"],"REQ7"],
+  "UI-025":["Detalle de parada","E",["repartidor"],"REQ9"],
+  "UI-026":["Alerta de desvío","E",["repartidor"],"REQ10"],
+  "UI-027":["Confirmar entrega","E",["repartidor"],"REQ11"],
+  "UI-028":["Reportar incidencia","E",["repartidor"],"REQ23"],
+  "UI-029":["Seguimiento en vivo","F",["cliente"],"REQ13"],
+  "UI-030":["Seguimiento por enlace","F",["cliente"],"REQ14"],
+  "UI-031":["Aviso de cambio de ETA","F",["cliente"],"REQ8"],
+  "UI-032":["Notificaciones de estado","F",["cliente"],"REQ15"],
+  "UI-033":["Canales de notificación","F",["cliente"],"REQ16"],
+  "UI-034":["Entrega confirmada","F",["cliente"],"REQ12"],
+  "UI-035":["Reportar un problema","G",["cliente","soporte"],"REQ17"],
+  "UI-036":["Ticket de soporte","G",["soporte"],"REQ18"],
+  "UI-037":["Reportes y analítica","G",["despachador","soporte"],"REQ35"],
+  "UI-038":["Usuarios y permisos","G",["soporte"],"REQ36"]
+};
+const FLOWS = {
+  "UI-001":[["Iniciar sesión","UI-004"],["Forgot password?","UI-002"],["Sign up","UI-003"]],
+  "UI-002":[["Volver","UI-001"]],
+  "UI-003":[["Registrarse","UI-004"],["Iniciar sesión","UI-001"]],
+  "UI-004":[["Ver perfil","UI-005"],["Cerrar sesión","UI-001"]],
+  "UI-005":[["Notificaciones","UI-033"],["Atrás","UI-004"]],
+  "UI-006":[["Agregar pedido","UI-007"],["Importar","UI-010"],["Ver detalle","UI-012"],["Plantillas","UI-011"]],
+  "UI-007":[["Find location","UI-009"],["Cotizar envío","UI-008"],["Add","UI-006"],["Cancel","UI-006"],["Guardar plantilla","UI-011"]],
+  "UI-008":[["Continuar con el pedido","UI-007"]],
+  "UI-009":[["Usar esta dirección","UI-007"]],
+  "UI-010":[["Importar pedidos","UI-006"]],
+  "UI-011":[["Crear pedido desde plantilla","UI-007"]],
+  "UI-012":[["Modificar","UI-013"],["Cancelar pedido","UI-014"],["Reprogramar","UI-015"],["Pagar","UI-016"],["Repetir","UI-007"],["Reportar problema","UI-035"],["Seguimiento","UI-029"]],
+  "UI-013":[["Guardar cambios","UI-012"],["Contactar soporte","UI-035"]],
+  "UI-014":[["Cancelar pedido","UI-012"],["Mantener pedido","UI-012"]],
+  "UI-015":[["Confirmar reprogramación","UI-012"],["Atrás","UI-012"]],
+  "UI-016":[["Volver al pedido","UI-012"]],
+  "UI-017":[["Abrir alerta","UI-019"],["Asignar pendiente","UI-018"],["Ver detalle","UI-012"]],
+  "UI-018":[["Asignar pedido","UI-017"]],
+  "UI-019":[["Confirmar reasignación","UI-017"],["Cancelar","UI-017"]],
+  "UI-020":[["Confirmar lotes","UI-021"]],
+  "UI-021":[["Ver dashboard","UI-017"]],
+  "UI-022":[["Volver al despacho","UI-017"]],
+  "UI-023":[["Iniciar turno","UI-024"]],
+  "UI-024":[["Navegar","UI-025"],["Marcar entregada","UI-027"],["Desvío detectado","UI-026"]],
+  "UI-025":[["Llegué al punto","UI-027"],["Problema","UI-028"]],
+  "UI-026":[["Volver a la ruta","UI-024"],["Recalcular","UI-024"],["Desvío autorizado","UI-025"]],
+  "UI-027":[["Confirmar entrega","UI-024"]],
+  "UI-028":[["Enviar a operaciones","UI-024"]],
+  "UI-029":[["Compartir seguimiento","UI-030"],["Configurar aviso","UI-031"]],
+  "UI-030":[["Volver al mapa","UI-029"]],
+  "UI-031":[["Ver seguimiento","UI-029"]],
+  "UI-032":[["Abrir mapa en vivo","UI-029"],["Calificar","UI-034"],["Ver comprobante","UI-034"]],
+  "UI-033":[["Volver al perfil","UI-005"]],
+  "UI-034":[["Algo no está bien","UI-035"],["Ver seguimiento","UI-029"]],
+  "UI-035":[["Enviar","UI-036"]],
+  "UI-036":[["Ver pedido","UI-012"]],
+  "UI-037":[["Ir al dashboard","UI-017"]],
+  "UI-038":[["Volver a inicio","UI-004"]]
+};
+const HINTS = {
+  "UI-001":"Demo: correo válido y contraseña de 4+ caracteres. Escribe «incorrecta» para ver el error.",
+  "UI-007":"Find location habilita Add. Cotizar y validar cobertura son los flujos del diagrama.",
+  "UI-024":"Paradas numeradas. El evento «Desvío detectado» abre la alerta.",
+  "UI-027":"Código SMS de prueba: 4829 · 3 intentos. Guarda firma o foto para confirmar.",
+  "UI-030":"Dirección protegida. Últimos 4 dígitos del teléfono: 0142."
+};
+const ROLE_META = [
+  ["todos","Todos","fa-border-all","Todas las pantallas"],
+  ["cliente","Cliente / Comercio","fa-store","Pedidos y seguimiento"],
+  ["despachador","Despachador","fa-clipboard-check","Operación del día"],
+  ["repartidor","Repartidor","fa-motorcycle","App móvil"],
+  ["soporte","Soporte / Admin","fa-headset","Casos y permisos"]
+];
+const PERSONAS = {
+  cliente:{name:"María Gómez", role:"Cliente / comercio", company:"Comercial Andina S.A.S.", email:"maria.gomez@comercialandina.com", phone:"601 555 0190", perms:["Crear pedidos","Ver historial","Pagar envíos","Seguir entregas","Reportar problemas"]},
+  despachador:{name:"Julián Herrera", role:"Despachador", company:"Despacha Operaciones", email:"julian.herrera@despacha.co", phone:"601 555 0114", perms:["Asignar pedidos","Reasignar","Agrupar lotes","Ver flota","Dashboard","Reportes"]},
+  repartidor:{name:"Carlos Méndez", role:"Repartidor", company:"Despacha", email:"carlos.mendez@despacha.co", phone:"310 555 0177", perms:["Ver ruta","Confirmar entrega","Reportar incidencia","Gestionar turno"]},
+  soporte:{name:"Elena Vargas", role:"Soporte / Admin", company:"Despacha", email:"elena.vargas@despacha.co", phone:"601 555 0160", perms:["Ver tickets","Reembolsar","Escalar","Gestionar usuarios","Reportes","Ver POD"]},
+  todos:{name:"María Gómez", role:"Vista general", company:"Comercial Andina S.A.S.", email:"maria.gomez@comercialandina.com", phone:"601 555 0190", perms:["Demostración de todos los módulos"]}
+};
+const state = { role:"todos", screen:"UI-001" };
+const nav = { past:[], future:[] };
+const store = {
+  selected:"SE-48213",
+  stop:1,
+  located:false,
+  quote:{origin:"Bodega Calle 80 #69-10", dest:"Calle 14 #8-22, Chapinero", vehicle:"Moto", weight:4.2, total:28600},
+  coverage:{address:"Calle 14 #8-22, Chapinero, Bogotá", ok:true},
+  preview:false,
+  template:"Reposición Chapinero",
+  editingTemplate:false,
+  paid:false,
+  txn:null,
+  shift:"fuera",
+  shiftStart:null,
+  evidence:{firma:false, foto:false, codigo:false},
+  code:"",
+  codeAttempts:0,
+  codeLocked:false,
+  receiver:"",
+  channels:{push:true, sms:true, mail:true},
+  matrix:{asignado:{push:true,sms:true,mail:false}, camino:{push:true,sms:false,mail:true}, entregado:{push:true,sms:true,mail:true}, retraso:{push:true,sms:true,mail:false}},
+  threshold:15,
+  assignType:"repartidor",
+  assignDriver:"Diana Castro",
+  assignOrder:"SE-48220",
+  reassignDriver:"Diana Castro",
+  reassignReason:"Repartidor no puede completar",
+  criteria:{zona:true, capacidad:true, horario:true},
+  moved:false,
+  slaOn:true,
+  slaOrder:["SE-48301","SE-48213","SE-48220","SE-48410"],
+  caseId:null,
+  caseMode:"formulario",
+  solution:null,
+  ticketReply:"",
+  ticketStatus:"Abierto",
+  linkUnlocked:false,
+  imported:false,
+  users:[
+    {name:"María Gómez", email:"maria.gomez@comercialandina.com", role:"Cliente / comercio", status:"Activo", last:"Hoy 08:12", perms:["Pedidos","Pagos","Seguimiento"]},
+    {name:"Julián Herrera", email:"julian.herrera@despacha.co", role:"Despachador", status:"Activo", last:"Hoy 07:40", perms:["Despacho","Flota","Reportes"]},
+    {name:"Carlos Méndez", email:"carlos.mendez@despacha.co", role:"Repartidor", status:"Activo", last:"Hoy 06:55", perms:["Ruta","Entregas"]},
+    {name:"Elena Vargas", email:"elena.vargas@despacha.co", role:"Soporte / Admin", status:"Activo", last:"Ayer 18:20", perms:["Tickets","Usuarios","Reembolsos"]}
+  ],
+  vehicles:[
+    {plate:"RWD 24A", type:"Moto", cap:"25 kg", status:"En ruta", driver:"Carlos Méndez", km:"18.420", maint:"12 nov 2026"},
+    {plate:"NKT 908", type:"Van", cap:"350 kg", status:"En ruta", driver:"Laura Pinzón", km:"64.110", maint:"02 nov 2026"},
+    {plate:"HJK 331", type:"Moto", cap:"20 kg", status:"Disponible", driver:"Diana Castro", km:"9.880", maint:"20 nov 2026"},
+    {plate:"QWE 118", type:"Bicicleta", cap:"15 kg", status:"Disponible", driver:"Andrés Ruiz", km:"3.240", maint:"01 dic 2026"},
+    {plate:"BLM 552", type:"Camión", cap:"1.200 kg", status:"Mantenimiento", driver:"—", km:"120.400", maint:"Hoy"}
+  ],
+  orders:[
+    {id:"SE-48213", dest:"Calle 14 #8-22, Chapinero", city:"Bogotá", amount:28600, status:"En camino", date:"2026-10-20", dateLabel:"20 oct 2026", window:"13:00 – 15:00", priority:"Alta", packages:2, weight:"4.2 kg", contact:"Marta Salazar", phone:"310 555 0142"},
+    {id:"SE-48220", dest:"Cra 7 #45-12, La Candelaria", city:"Bogotá", amount:18400, status:"Pendiente", date:"2026-10-20", dateLabel:"20 oct 2026", window:"15:00 – 17:00", priority:"Normal", packages:1, weight:"1.1 kg", contact:"Luis Peña", phone:"315 555 0108"},
+    {id:"SE-48301", dest:"Cra 15 #93-40, Chicó", city:"Bogotá", amount:33800, status:"Retrasado", date:"2026-10-20", dateLabel:"20 oct 2026", window:"12:00 – 13:00", priority:"Express", packages:1, weight:"0.8 kg", contact:"Ana Ruiz", phone:"300 555 0199"},
+    {id:"SE-48410", dest:"Cll 53 #24-11, Teusaquillo", city:"Bogotá", amount:21000, status:"Pendiente", date:"2026-10-20", dateLabel:"20 oct 2026", window:"16:00 – 18:00", priority:"Alta", packages:2, weight:"3.0 kg", contact:"Pedro Díaz", phone:"312 555 0164"},
+    {id:"SE-48102", dest:"Av. Suba #112-30", city:"Bogotá", amount:45200, status:"Entregado", date:"2026-10-19", dateLabel:"19 oct 2026", window:"10:00 – 12:00", priority:"Alta", packages:3, weight:"8 kg", contact:"Sofía León", phone:"301 555 0120"},
+    {id:"SE-47990", dest:"Cll 80 #69-10, Engativá", city:"Bogotá", amount:12900, status:"Cancelado", date:"2026-10-18", dateLabel:"18 oct 2026", window:"09:00 – 11:00", priority:"Normal", packages:1, weight:"0.6 kg", contact:"Bodega norte", phone:"601 555 0101"}
+  ],
+  templates:[
+    {name:"Reposición Chapinero", origin:"Bodega Calle 80 #69-10", dest:"Calle 14 #8-22", contact:"Marta Salazar", pack:"Caja mediana", notes:"Portería, apto 302", window:"13:00 – 15:00"},
+    {name:"Ruta Suba semanal", origin:"Bodega Calle 80 #69-10", dest:"Av. Suba #112-30", contact:"Sofía León", pack:"Sobre", notes:"Recibir en recepción", window:"10:00 – 12:00"},
+    {name:"Documentos Chicó", origin:"Oficina Cra 11 #82-20", dest:"Cra 15 #93-40", contact:"Ana Ruiz", pack:"Documentos", notes:"No dejar con el celador", window:"08:00 – 10:00"}
+  ],
+  stops:[
+    {n:1, addr:"Calle 14 #8-22", barrio:"Chapinero", apt:"Apto 302", piso:"3", ref:"Edificio Mirador", dist:"1.2 km", eta:"14:05", window:"antes de 2:00 p. m.", pkgs:[{t:"Caja", g:"7781"},{t:"Sobre", g:"7782"}], status:"siguiente", contact:"Marta Salazar", phone:"310 555 0142", x:78, y:168},
+    {n:2, addr:"Cra 13 #22-40", barrio:"Teusaquillo", apt:"Local 2", piso:"1", ref:"Al lado de la panadería", dist:"2.1 km", eta:"14:28", window:"14:00 – 15:00", pkgs:[{t:"Bolsa", g:"7804"}], status:"pendiente", contact:"Laura Gómez", phone:"318 555 0133", x:132, y:132},
+    {n:3, addr:"Av. Caracas #34-15", barrio:"Santa Fe", apt:"Of. 501", piso:"5", ref:"Torre Andina", dist:"1.6 km", eta:"14:51", window:"14:30 – 16:00", pkgs:[{t:"Caja", g:"7810"}], status:"pendiente", contact:"Diego Mora", phone:"320 555 0170", x:188, y:108},
+    {n:4, addr:"Cll 45 #19-08", barrio:"Palermo", apt:"Casa", piso:"1", ref:"Fachada verde", dist:"1.4 km", eta:"15:12", window:"15:00 – 16:30", pkgs:[{t:"Caja", g:"7822"},{t:"Caja", g:"7823"}], status:"pendiente", contact:"Elena Páez", phone:"311 555 0188", x:236, y:90},
+    {n:5, addr:"Cra 7 #67-22", barrio:"Chapinero Alto", apt:"Apto 801", piso:"8", ref:"Conjunto El Parque", dist:"2.4 km", eta:"15:36", window:"15:00 – 17:00", pkgs:[{t:"Sobre", g:"7840"}], status:"pendiente", contact:"Camilo Ortiz", phone:"304 555 0115", x:286, y:70},
+    {n:6, addr:"Cll 72 #10-50", barrio:"Lago", apt:"Apto 14", piso:"2", ref:"Porteros 24 h", dist:"1.9 km", eta:"16:02", window:"16:00 – 18:00", pkgs:[{t:"Caja", g:"7855"}], status:"pendiente", contact:"Valeria Nieto", phone:"313 555 0194", x:334, y:52}
+  ],
+  instructions:[
+    {t:"Fachada de ladrillo, puerta de vidrio", ok:false},
+    {t:"El timbre del 302 está dañado: llamar al citófono", ok:false},
+    {t:"Portería atiende hasta las 7:00 p. m.", ok:false}
+  ],
+  editUntil:"hoy 15:40",
+  notifOpen:true
+};
+const DRIVERS = [
+  {name:"Diana Castro", initials:"DC", vehicle:"Moto", zone:"Chicó", active:1, load:.2, eta:"9 min", dist:"1.8 km", rating:"4.7"},
+  {name:"Carlos Méndez", initials:"CM", vehicle:"Moto", zone:"Chapinero", active:4, load:.62, eta:"12 min", dist:"3.4 km", rating:"4.8"},
+  {name:"Laura Pinzón", initials:"LP", vehicle:"Van", zone:"Suba", active:2, load:.41, eta:"18 min", dist:"5.1 km", rating:"4.9"},
+  {name:"Andrés Ruiz", initials:"AR", vehicle:"Bicicleta", zone:"Candelaria", active:6, load:.85, eta:"27 min", dist:"2.2 km", rating:"4.6"}
+];
+const TEAMS = [
+  {name:"Equipo Centro", initials:"EC", vehicle:"2 motos", zone:"Chapinero", active:5, load:.48, eta:"11 min", dist:"2.4 km"},
+  {name:"Equipo Norte", initials:"EN", vehicle:"Van + moto", zone:"Suba", active:3, load:.55, eta:"16 min", dist:"4.0 km"}
+];
+const SLA = {
+  "SE-48301":{prio:"Express", eta:"14:10", sla:"14:30", margin:"+20 min", addr:"Cra 15 #93-40"},
+  "SE-48213":{prio:"Alta", eta:"14:40", sla:"15:00", margin:"+20 min", addr:"Calle 14 #8-22"},
+  "SE-48220":{prio:"Normal", eta:"15:10", sla:"17:00", margin:"+110 min", addr:"Cra 7 #45-12"},
+  "SE-48410":{prio:"Alta", eta:"15:40", sla:"16:10", margin:"+30 min", addr:"Cll 53 #24-11"}
+};
+
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function money(n){ return "$" + Number(n).toLocaleString("es-CO"); }
+function persona(){ return PERSONAS[state.role] || PERSONAS.todos; }
+function initials(name){ return name.split(" ").slice(0,2).map(p => p[0]).join(""); }
+function meta(id){ const m = META[id]; return {id, title:m[0], process:m[1], roles:m[2], req:m[3]}; }
+function isPhone(){ return true; }
+function statusBar(){ return `<div class="ph-status"><span>14:04</span><span class="ph-sig"><i class="fa-solid fa-signal"></i><i class="fa-solid fa-wifi"></i><i class="fa-solid fa-battery-full"></i></span></div>`; }
+function withStatus(html){ return html.includes("ph-status") ? html : statusBar() + html; }
+function inRole(id){ if (state.role === "todos") return true; return meta(id).roles.includes(state.role); }
+function order(){ return store.orders.find(o => o.id === store.selected) || store.orders[0]; }
+function stop(){ return store.stops.find(s => s.n === store.stop) || store.stops[0]; }
+function pill(status){
+  const map = {"Pendiente":"st-pend","En camino":"st-ruta","En ruta":"st-ruta","Asignado":"st-ruta","Entregado":"st-ok","Retrasado":"st-late","Cancelado":"st-can","Urgente":"st-exp","Express":"st-exp","Alta":"st-alta","Normal":"st-norm","Disponible":"st-ok","En pausa":"st-pend","Fuera de turno":"st-can","Mantenimiento":"st-late","Pagado":"st-ok","Por pagar":"st-pend","Abierto":"st-late","En revisión":"st-pend","Resuelto":"st-ok","Escalado":"st-exp","Activo":"st-ok","Inactivo":"st-can","siguiente":"st-ruta","pendiente":"st-pend","entregada":"st-ok"};
+  return `<span class="pill ${map[status] || "st-norm"}">${esc(status)}</span>`;
+}
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove("show"), 2600);
+}
+function go(id){
+  if (!META[id]) return;
+  if (id !== state.screen){ nav.past.push(state.screen); nav.future = []; state.screen = id; }
+  render();
+}
+function back(){ if (!nav.past.length) return; nav.future.push(state.screen); state.screen = nav.past.pop(); render(); }
+function fwd(){ if (!nav.future.length) return; nav.past.push(state.screen); state.screen = nav.future.pop(); render(); }
+function procOf(letter){ return PROCESSES.find(p => p.id === letter); }
+
+function svgMap(opts){
+  const pins = (opts.pins || []).map(p => `<g transform="translate(${p.x} ${p.y})"><circle r="${p.r || 11}" fill="${p.color || "#0f766e"}" stroke="#fff" stroke-width="2"/><text text-anchor="middle" y="4" font-size="11" font-family="IBM Plex Mono, monospace" fill="#fff" font-weight="700">${p.n ?? ""}</text></g>`).join("");
+  const pulse = opts.driver ? `<g transform="translate(${opts.driver.x} ${opts.driver.y})"><circle r="14" fill="#2563eb" opacity=".25"><animate attributeName="r" values="8;18;8" dur="2s" repeatCount="indefinite"/></circle><circle r="7" fill="#2563eb" stroke="#fff" stroke-width="2"/></g>` : "";
+  return `<div class="map-wrap" style="height:${opts.h || 220}px"><svg viewBox="0 0 400 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect width="400" height="240" fill="#e6f0e4"/>
+    <rect x="250" y="8" width="96" height="62" rx="10" fill="#b7d7c2"/>
+    <rect x="16" y="150" width="78" height="52" rx="10" fill="#b7d7c2"/>
+    <path d="M300 168 C340 190 370 210 400 236 L400 150 L330 150 Z" fill="#b7d3ea"/>
+    <g stroke="#f8fafc" stroke-width="14" fill="none"><path d="M0 48 H400"/><path d="M0 108 H400"/><path d="M0 168 H400"/><path d="M70 0 V240"/><path d="M150 0 V240"/><path d="M230 0 V240"/><path d="M310 0 V240"/></g>
+    <g stroke="#e2e8f0" stroke-width="5" fill="none"><path d="M0 78 H400"/><path d="M0 138 H400"/><path d="M110 0 V240"/><path d="M190 0 V240"/><path d="M270 0 V240"/></g>
+    <g fill="#94a3b8" font-size="9" font-family="Plus Jakarta Sans, sans-serif"><text x="8" y="44">Cll 72</text><text x="8" y="104">Cll 45</text><text x="8" y="164">Cll 14</text><text x="74" y="16">Cra 13</text><text x="194" y="16">Av. Caracas</text><text x="314" y="16">Cra 7</text></g>
+    ${opts.coverage || ""}
+    ${opts.route ? `<path d="${opts.route}" fill="none" stroke="${opts.routeColor || "#0f766e"}" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>` : ""}
+    ${opts.alt ? `<path d="${opts.alt}" fill="none" stroke="#e11d48" stroke-width="3.5" stroke-dasharray="7 5" stroke-linecap="round"/>` : ""}
+    ${pins}${pulse}
+  </svg></div>`;
+}
+const ROUTE_D = "M48 196 C70 180 78 168 100 150 C130 128 150 120 188 108 C220 96 250 86 286 70 C310 58 330 54 360 40";
+
+function appShell(active, body){
+  const p = persona();
+  const links = primaryLinks().map(l => `<button type="button" class="navlink ${active===l[0]?"on":""}" data-go="${l[0]}" title="${l[1]}"><i class="fa-solid ${l[2]}"></i>${l[1]}</button>`).join("");
+  const bell = state.role === "despachador" ? "UI-017" : state.role === "soporte" ? "UI-036" : state.role === "repartidor" ? "UI-024" : "UI-032";
+  return `<div class="screen h-full flex flex-col bg-[#f4f7f6] screen-in">
+    <header class="appbar shrink-0 bg-white">
+      <div class="appbar-top">
+        <div class="logo">D</div>
+        <div class="brand-name">Despacha</div>
+        <div class="ml-auto flex items-center gap-1">
+          <button type="button" class="icon-btn" data-go="${bell}" title="Avisos"><i class="fa-solid fa-bell"></i></button>
+          <div class="relative">
+            <button type="button" data-act="menu" class="flex items-center gap-2 px-1 py-1 rounded-xl hover:bg-slate-50" title="${esc(p.name)}">
+              <span class="avatar">${initials(p.name)}</span>
+            </button>
+            <div id="user-menu" class="hidden absolute right-0 top-12 bg-white shadow-xl rounded-xl border border-slate-200 p-1 w-52 z-30">
+              <button type="button" class="row-link rounded-lg px-3 py-2 text-sm" data-go="UI-005"><i class="fa-solid fa-user mr-2 text-slate-400"></i>Ver perfil</button>
+              <button type="button" class="row-link rounded-lg px-3 py-2 text-sm text-rose-600" data-go="UI-001"><i class="fa-solid fa-right-from-bracket mr-2"></i>Cerrar sesión</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <nav>${links}</nav>
+    </header>
+    <div class="flex-1 min-h-0 overflow-auto">${body}</div>
+  </div>`;
+}
+function primaryLinks(){
+  const all = {
+    cliente:[["UI-004","Inicio","fa-house"],["UI-006","Pedidos","fa-box"],["UI-029","Seguimiento","fa-location-dot"],["UI-032","Avisos","fa-bell"]],
+    despachador:[["UI-004","Inicio","fa-house"],["UI-017","Dashboard","fa-gauge-high"],["UI-018","Asignar","fa-clipboard-check"],["UI-020","Lotes","fa-layer-group"],["UI-022","Flota","fa-truck"]],
+    repartidor:[["UI-004","Inicio","fa-house"],["UI-023","Turno","fa-clock"],["UI-024","Ruta","fa-route"]],
+    soporte:[["UI-004","Inicio","fa-house"],["UI-036","Tickets","fa-headset"],["UI-037","Reportes","fa-chart-column"],["UI-038","Usuarios","fa-users"]]
+  };
+  if (state.role === "todos") return [["UI-004","Inicio","fa-house"],["UI-006","Pedidos","fa-box"],["UI-017","Despacho","fa-gauge-high"],["UI-024","Ruta","fa-route"],["UI-036","Soporte","fa-headset"]];
+  return all[state.role];
+}
+function page(kicker, title, inner, actions=""){
+  return `<div class="page p-5 md:p-6">${kicker ? `<div class="text-xs font-semibold text-teal-700 mb-1">${kicker}</div>` : ""}
+    <div class="flex flex-wrap items-end justify-between gap-3 mb-4"><h1 class="text-xl font-semibold text-slate-900">${title}</h1><div class="flex flex-wrap gap-2">${actions}</div></div>${inner}</div>`;
+}
+function phoneShell(title, body, tab){
+  const item = (id, icon, label) => `<button type="button" data-go="${id}" class="tabitem ${tab===id?"on":""}"><i class="fa-solid ${icon}"></i>${label}</button>`;
+  const elapsed = store.shift !== "fuera" && store.shiftStart ? fmtDur(Date.now() - store.shiftStart) : "—";
+  return `<div class="screen h-full flex flex-col bg-white screen-in">
+    ${statusBar()}
+    <div class="px-4 pb-2 flex items-center gap-2">
+      <div class="font-bold text-slate-900">Despacha</div>
+      <span class="text-[11px] text-slate-500 ml-auto" id="shift-elapsed">${store.shift === "fuera" ? "Fuera de turno" : "En turno · " + elapsed}</span>
+    </div>
+    <div class="px-4 pb-2"><h1 class="text-lg font-semibold">${title}</h1></div>
+    <div class="flex-1 min-h-0 overflow-auto px-4 pb-3">${body}</div>
+    <div class="tabbar shrink-0 flex">${item("UI-023","fa-clock","Turno")}${item("UI-024","fa-route","Ruta")}${item("UI-028","fa-triangle-exclamation","Incidencia")}</div>
+  </div>`;
+}
+function fmtDur(ms){ const s = Math.max(0, Math.floor(ms/1000)); const h = Math.floor(s/3600), m = Math.floor((s%3600)/60); return h + " h " + String(m).padStart(2,"0") + " min"; }
+function field(label, control){ return `<label class="block">${label ? `<span class="lbl">${label}</span>` : ""}${control}</label>`; }
+function B(label, attrs="", kind="primary", icon=""){
+  let extra = "";
+  const clean = String(attrs).replace(/\sclass="([^"]*)"/, (_, c) => { extra = " " + c; return ""; });
+  return `<button type="button" class="btn btn-${kind}${extra}" ${clean}>${icon ? `<i class="${icon}"></i>` : ""}${label}</button>`;
+}
+
+const renderers = {
+"UI-001"(){
+  return `<div class="screen h-full grid md:grid-cols-2 screen-in">
+    <aside class="hidden md:flex flex-col justify-between bg-teal-900 text-white p-8">
+      <div><div class="logo bg-white text-teal-800 mb-4">D</div><div class="text-sm text-teal-100">Plataforma de despacho, rutas y seguimiento</div>
+      <h2 class="text-3xl font-semibold mt-6 leading-tight">Menos kilómetros.<br>Más entregas a tiempo.</h2></div>
+      <ul class="text-sm space-y-2 text-teal-50"><li><i class="fa-solid fa-box mr-2"></i>Crea o importa pedidos</li><li><i class="fa-solid fa-route mr-2"></i>Despacha rutas optimizadas</li><li><i class="fa-solid fa-location-dot mr-2"></i>Sigue cada parada en vivo</li></ul>
+    </aside>
+    <div class="flex items-center justify-center p-6 overflow-auto">
+      <form class="w-full max-w-sm" onsubmit="return false">
+        <h1 class="text-2xl font-semibold mb-1">Inicio de sesión</h1>
+        <p class="text-sm text-slate-500 mb-5">Ingresa con correo o con tu cuenta.</p>
+        <div class="grid grid-cols-2 gap-2 mb-4">
+          ${B("Google", `data-act="social" data-provider="Google"`, "secondary", "fa-brands fa-google")}
+          ${B("Apple", `data-act="social" data-provider="Apple"`, "secondary", "fa-brands fa-apple")}
+        </div>
+        <div class="text-center text-xs text-slate-400 mb-3">o con correo</div>
+        ${field("Correo electrónico (obligatorio)", `<input class="inp" id="login-email" type="email" value="maria.gomez@comercialandina.com" autocomplete="off">`)}
+        <div class="mt-3">${field("Contraseña", `<div class="relative"><input class="inp pr-10" id="login-pass" type="password" value="ruta2026" autocomplete="off"><button type="button" class="icon-btn absolute right-1 top-0.5" data-act="toggle-pass" data-target="login-pass" aria-label="Mostrar u ocultar"><i class="fa-solid fa-eye"></i></button></div>`)}</div>
+        <p id="login-error" class="hidden text-sm text-rose-600 mt-2">Credenciales incorrectas. Revisa correo y contraseña.</p>
+        <div class="mt-4">${B("Iniciar sesión", `data-act="login" class="w-full"`, "primary")}</div>
+        <div class="flex justify-between mt-3 text-sm">
+          <button type="button" class="btn btn-ghost" data-go="UI-002">Forgot password?</button>
+          <button type="button" class="btn btn-ghost" data-go="UI-003">Sign up</button>
+        </div>
+        <button type="button" class="btn btn-ghost mt-2" data-act="help"><i class="fa-solid fa-circle-question"></i>Ayuda</button>
+      </form>
+    </div>
+  </div>`;
+},
+"UI-002"(){
+  return `<div class="screen h-full flex items-center justify-center p-6 bg-slate-50 screen-in">
+    <div class="card p-6 w-full max-w-md">
+      <button type="button" class="icon-btn -ml-2" data-go="UI-001" aria-label="Volver"><i class="fa-solid fa-arrow-left"></i></button>
+      <h1 class="text-xl font-semibold mt-2">Recuperar contraseña</h1>
+      <p class="text-sm text-slate-500 mt-1 mb-4">Se enviará un enlace al correo para restablecer la contraseña.</p>
+      ${field("Correo electrónico asociado a la cuenta", `<input class="inp" id="reset-email" type="email" placeholder="tu@empresa.com" autocomplete="off">`)}
+      <p id="reset-ok" class="hidden mt-3 text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg p-3">Enlace enviado. Revisa la bandeja de entrada. Ya puedes volver al inicio de sesión.</p>
+      <div class="mt-4 flex gap-2">${B("Reset password", `id="reset-btn" data-act="reset-send" disabled`, "primary")}${B("Volver", `data-go="UI-001"`, "secondary")}</div>
+    </div>
+  </div>`;
+},
+"UI-003"(){
+  return `<div class="screen h-full grid md:grid-cols-5 screen-in">
+    <div class="md:col-span-3 overflow-auto p-6 md:p-10">
+      <div class="font-semibold text-teal-800 mb-6">Despacha</div>
+      <h1 class="text-2xl font-semibold">Crear usuario</h1>
+      <p class="text-sm text-slate-500 mb-4">Registra tu empresa para empezar a despachar.</p>
+      <div class="max-w-md space-y-3">
+        ${field("Nombre de empresa", `<input class="inp" id="reg-company" value="Comercial Andina S.A.S.">`)}
+        ${field("Correo electrónico", `<input class="inp" id="reg-email" type="email" value="maria.gomez@comercialandina.com">`)}
+        ${field("Contraseña", `<div class="relative"><input class="inp pr-10" id="reg-pass" type="password" value="ruta2026"><button type="button" class="icon-btn absolute right-1 top-0.5" data-act="toggle-pass" data-target="reg-pass"><i class="fa-solid fa-eye"></i></button></div>`)}
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="reg-terms" checked> Acepto las condiciones de servicio</label>
+        <p id="reg-error" class="hidden text-sm text-rose-600"></p>
+        ${B("Registrarse", `data-act="register"`, "primary")}
+        <div class="text-sm">¿Ya tienes cuenta? <button type="button" class="btn btn-ghost" data-go="UI-001">Iniciar sesión</button></div>
+      </div>
+    </div>
+    <aside class="md:col-span-2 bg-teal-50 p-8 hidden md:block">
+      <h2 class="font-semibold mb-4">Cómo funciona</h2>
+      <ol class="space-y-4 text-sm"><li class="card p-3"><b>1.</b> Agrega tus pedidos</li><li class="card p-3"><b>2.</b> Importa tus datos</li><li class="card p-3"><b>3.</b> Ve rutas</li></ol>
+    </aside>
+  </div>`;
+},
+"UI-004"(){
+  const p = persona();
+  const modules = modulesFor();
+  const counts = {pend: store.orders.filter(o=>o.status==="Pendiente").length, ruta: store.orders.filter(o=>o.status==="En camino"||o.status==="Retrasado").length, ok: store.orders.filter(o=>o.status==="Entregado").length};
+  const body = page("", `Hola, ${esc(p.name.split(" ")[0])}`, `
+    <p class="text-sm text-slate-500 -mt-2 mb-4">${esc(p.role)} · ${esc(p.company)}. Este es el resumen y el acceso a los módulos de tu rol.</p>
+    <div class="grid grid-cols-3 gap-3 mb-5">
+      <div class="card p-4"><div class="text-xs text-slate-500">Pendientes</div><b class="text-2xl">${counts.pend}</b></div>
+      <div class="card p-4"><div class="text-xs text-slate-500">En ruta</div><b class="text-2xl">${counts.ruta}</b></div>
+      <div class="card p-4"><div class="text-xs text-slate-500">Entregados</div><b class="text-2xl">${counts.ok}</b></div>
+    </div>
+    <h2 class="text-sm font-semibold text-slate-500 mb-2">Ir a un módulo</h2>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">${modules.map(m => `<button type="button" data-go="${m.go}" class="card p-4 text-left hover:border-teal-300"><i class="fa-solid ${m.icon} text-teal-700"></i><div class="font-semibold mt-2">${m.title}</div><div class="text-sm text-slate-500">${m.desc}</div></button>`).join("")}</div>
+  `, `${B("Ver perfil", `data-go="UI-005"`, "secondary", "fa-solid fa-user")}${B("Cerrar sesión", `data-go="UI-001"`, "secondary", "fa-solid fa-right-from-bracket")}`);
+  return appShell("UI-004", body);
+},
+"UI-005"(){
+  const p = persona();
+  const body = page("Cuenta", "Perfil", `
+    <div class="grid md:grid-cols-3 gap-4">
+      <div class="card p-5 md:col-span-2">
+        <div class="flex items-center gap-3 mb-4"><span class="avatar w-12 h-12 text-base">${initials(p.name)}</span><div><div class="font-semibold text-lg">${esc(p.name)}</div><div class="text-sm text-slate-500">${esc(p.role)}</div></div></div>
+        <dl class="grid sm:grid-cols-2 gap-3 text-sm">
+          <div><dt class="lbl">Nombre de empresa</dt><dd>${esc(p.company)}</dd></div>
+          <div><dt class="lbl">Correo electrónico</dt><dd>${esc(p.email)}</dd></div>
+          <div><dt class="lbl">Teléfono</dt><dd>${esc(p.phone)}</dd></div>
+          <div><dt class="lbl">Rol</dt><dd>${esc(p.role)}</dd></div>
+        </dl>
+      </div>
+      <div class="card p-5"><div class="lbl">Permisos</div><ul class="space-y-2 text-sm">${p.perms.map(x => `<li><i class="fa-solid fa-check text-teal-600 mr-2"></i>${esc(x)}</li>`).join("")}</ul></div>
+    </div>
+  `, `${B("Notificaciones", `data-go="UI-033"`, "primary", "fa-solid fa-bell")}${B("Atrás", `data-go="UI-004"`, "secondary", "fa-solid fa-arrow-left")}`);
+  return appShell("UI-005", body);
+},
+"UI-006"(){
+  const rows = store.orders.map(o => `<tr class="border-t border-slate-100" data-row data-search="${esc(o.id + " " + o.dest)}" data-status="${esc(o.status)}" data-date="${o.date}">
+    <td class="py-2 pr-3 font-mono text-xs">${o.id}</td>
+    <td class="py-2 pr-3">${esc(o.dest)}</td>
+    <td class="py-2 pr-3">${money(o.amount)}</td>
+    <td class="py-2 pr-3 text-slate-500">${o.dateLabel}</td>
+    <td class="py-2 pr-3">${pill(o.status)}</td>
+    <td class="py-2">${B("Ver detalle", `data-go="UI-012" data-order="${o.id}"`, "secondary")}</td>
+  </tr>`).join("");
+  const body = page("Pedidos · Cliente / comercio", "Historial de pedidos", `
+    <div class="card p-3 mb-3 grid md:grid-cols-3 gap-2">
+      <input class="inp" data-q placeholder="Buscar n.º o dirección" aria-label="Buscador">
+      <select class="sel" data-status><option value="">Estado: todos</option><option>Pendiente</option><option>En camino</option><option>Retrasado</option><option>Entregado</option><option>Cancelado</option></select>
+      <select class="sel" data-date><option value="">Fecha: todas</option><option value="2026-10-20">20 oct 2026</option><option value="2026-10-19">19 oct 2026</option><option value="2026-10-18">18 oct 2026</option></select>
+    </div>
+    <div class="card overflow-auto"><table class="w-full text-sm px-3"><thead class="text-left text-slate-500"><tr><th class="py-2 pl-3">Pedido</th><th>Destino</th><th>Importe</th><th>Fecha</th><th>Estado</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+    <p data-empty class="hidden p-6 text-center text-sm text-slate-500">Ningún pedido coincide con la búsqueda.</p></div>
+  `, `${B("Agregar pedido", `data-go="UI-007"`, "primary", "fa-solid fa-plus")}${B("Importar", `data-go="UI-010"`, "secondary", "fa-solid fa-file-import")}${B("Plantillas", `data-go="UI-011"`, "secondary", "fa-solid fa-bookmark")}`);
+  return appShell("UI-006", body);
+},
+"UI-007"(){
+  const q = store.quote;
+  const body = page("Nuevo envío", "Crear pedido", `
+    ${store.fromTemplate ? `<div class="mb-3 text-sm bg-amber-50 border border-amber-100 rounded-lg p-3">Datos precargados desde la plantilla «${esc(store.template)}».</div>` : ""}
+    ${store.quoteApplied ? `<div class="mb-3 text-sm bg-teal-50 border border-teal-100 rounded-lg p-3">Cotización aplicada: ${money(q.total)} · ${esc(q.vehicle)} · ${q.weight} kg.</div>` : ""}
+    ${store.addressOk ? `<div class="mb-3 text-sm bg-emerald-50 border border-emerald-100 rounded-lg p-3">Dirección validada: ${esc(store.coverage.address)} · servicio disponible.</div>` : ""}
+    <div class="grid lg:grid-cols-5 gap-4">
+      <div class="lg:col-span-3 card p-4 space-y-3">
+        <div class="flex items-center justify-between"><h2 class="font-semibold">Ubicación (obligatoria)</h2><span class="text-xs text-rose-600">Obligatorio</span></div>
+        <div class="flex gap-1 border-b border-slate-200">
+          <button type="button" class="tab ${store.locTab!=="coord"?"on":""}" data-act="tab" data-tab="address">Address</button>
+          <button type="button" class="tab ${store.locTab==="coord"?"on":""}" data-act="tab" data-tab="coord">Coordinates</button>
+        </div>
+        <div data-panel="address" class="${store.locTab==="coord"?"hidden":""}">${field("Dirección", `<input class="inp" id="addr" value="${esc(store.coverage.address)}">`)}</div>
+        <div data-panel="coord" class="${store.locTab==="coord"?"":"hidden"} grid grid-cols-2 gap-2">${field("Latitud", `<input class="inp" value="4.6486">`)}${field("Longitud", `<input class="inp" value="-74.0628">`)}</div>
+        <div class="flex flex-wrap gap-2">${B("Find location", `data-act="find"`, "secondary", "fa-solid fa-location-crosshairs")}${B("Validar dirección", `data-go="UI-009"`, "secondary", "fa-solid fa-map")}${B("Cotizar envío", `data-go="UI-008"`, "secondary", "fa-solid fa-calculator")}</div>
+        ${svgMap({h:200, pins: store.located ? [{x:150,y:168,n:"", color:"#e11d48"}] : [], route: store.located ? "M70 40 C90 80 120 120 150 168" : ""})}
+        <details open class="text-sm"><summary class="font-semibold cursor-pointer">Detalles del pedido (opcional)</summary><div class="mt-2">${field("", `<input class="inp" placeholder="Referencia interna, instrucciones" value="Reposición semanal">`)}</div></details>
+        <details class="text-sm"><summary class="font-semibold cursor-pointer">Paquetes (opcional)</summary><div class="mt-2 grid grid-cols-3 gap-2">${field("Cantidad", `<input class="inp" value="2">`)}${field("Peso", `<input class="inp" value="4.2 kg">`)}${field("Tipo", `<input class="inp" value="Caja">`)}</div></details>
+        <details class="text-sm"><summary class="font-semibold cursor-pointer">Programación (opcional)</summary><div class="mt-2 grid grid-cols-2 gap-2">${field("Fecha", `<input class="inp" value="20 oct 2026">`)}${field("Franja", `<input class="inp" value="13:00 – 15:00">`)}</div></details>
+      </div>
+      <div class="lg:col-span-2 card p-4 h-fit">
+        <h2 class="font-semibold mb-2">Resumen</h2>
+        <p class="text-sm text-slate-500 mb-3">El botón Add se habilita cuando la ubicación es válida.</p>
+        <div class="text-sm space-y-1 mb-4"><div>Destino: <b>${esc(store.coverage.address)}</b></div><div>Ubicación: ${store.located ? pill("Lista") : pill("Pendiente")}</div></div>
+        <div class="flex flex-col gap-2">
+          ${B("Add", `id="add-btn" data-act="add-order" ${store.located?"":"disabled"}`, "primary")}
+          ${B("Guardar plantilla", `data-go="UI-011"`, "secondary")}
+          ${B("Cancel", `data-go="UI-006"`, "secondary")}
+        </div>
+      </div>
+    </div>`, "");
+  return appShell("UI-007", body);
+},
+"UI-008"(){
+  const q = store.quote;
+  const body = page("Antes de confirmar", "Cotizador de envío", `
+    <div class="grid lg:grid-cols-2 gap-4">
+      <div class="card p-4 space-y-3">
+        ${field("Dirección de origen", `<input class="inp" id="q-origin" value="${esc(q.origin)}">`)}
+        ${field("Dirección de destino", `<input class="inp" id="q-dest" value="${esc(q.dest)}">`)}
+        <div class="grid grid-cols-2 gap-2">
+          ${field("Vehículo", `<select class="sel" id="q-vehicle"><option ${q.vehicle==="Moto"?"selected":""}>Moto</option><option ${q.vehicle==="Van"?"selected":""}>Van</option><option ${q.vehicle==="Camión"?"selected":""}>Camión</option></select>`)}
+          ${field("Peso / volumen (kg)", `<input class="inp" id="q-weight" type="number" min="0.1" step="0.1" value="${q.weight}">`)}
+        </div>
+        <div class="text-sm text-slate-500">Distancia estimada <b id="q-km">6.4 km</b> · tiempo <b id="q-time">42 min</b></div>
+        ${B("Recalcular", `data-act="recalc"`, "secondary", "fa-solid fa-rotate")}
+      </div>
+      <div class="card p-4">
+        <h2 class="font-semibold mb-3">Tarifa estimada</h2>
+        <dl class="text-sm space-y-2" id="q-break">
+          <div class="flex justify-between"><dt>Tarifa base</dt><dd id="q-base">${money(22000)}</dd></div>
+          <div class="flex justify-between"><dt>Recargos</dt><dd id="q-extra">${money(6600)}</dd></div>
+          <div class="flex justify-between text-base font-semibold border-t pt-2"><dt>Total</dt><dd id="q-total">${money(q.total)}</dd></div>
+        </dl>
+        <p class="text-xs text-slate-500 mt-3 mb-4">El valor se muestra antes de confirmar. Puedes cambiar datos y recalcular.</p>
+        ${B("Continuar con el pedido", `data-act="apply-quote"`, "primary")}
+      </div>
+    </div>`, "");
+  return appShell("UI-008", body);
+},
+"UI-009"(){
+  const ok = store.coverage.ok;
+  const body = page("Cobertura", "Cobertura de servicio", `
+    <div class="grid lg:grid-cols-2 gap-4">
+      <div class="card p-4 space-y-3">
+        ${field("Dirección", `<input class="inp" id="cover-address" value="${esc(store.coverage.address)}">`)}
+        <div class="flex gap-2">${B("Buscar en el mapa", `data-act="cover-check"`, "secondary", "fa-solid fa-magnifying-glass")}${B("Dirección cercana", `data-act="nearby"`, "secondary")}</div>
+        <div class="text-sm ${ok?"text-emerald-700 bg-emerald-50":"text-rose-700 bg-rose-50"} rounded-lg p-3" id="cover-msg">${ok ? "Servicio disponible en esta dirección." : "Fuera de cobertura. Elige una dirección cercana o ajusta la zona."}</div>
+        <div><div class="lbl">Horarios</div><p class="text-sm">Lun–sáb 8:00 a. m. – 7:00 p. m. Domingo solo Express hasta la 1:00 p. m.</p></div>
+        <div><div class="lbl">Restricciones</div><p class="text-sm">${ok ? "Sin pico y placa para moto. Edificios con citófono requieren contacto." : "Zona rural sin ventana del mismo día."}</p></div>
+        ${B("Usar esta dirección", `data-act="use-address" ${ok?"":"disabled"}`, "primary")}
+      </div>
+      <div>${svgMap({h:340, coverage: ok ? `<path d="M40 30 H250 L280 80 L240 190 L60 200 Z" fill="rgba(16,185,129,.28)" stroke="#059669" stroke-width="2"/>` : `<path d="M40 30 H180 L160 120 L30 100 Z" fill="rgba(16,185,129,.18)" stroke="#059669"/>`, pins:[{x: ok?150:320, y: ok?150:70, n:"", color: ok?"#059669":"#e11d48"}]})}</div>
+    </div>`, "");
+  return appShell("UI-009", body);
+},
+"UI-010"(){
+  const body = page("Carga masiva", "Importar pedidos", `
+    <div class="grid lg:grid-cols-5 gap-4">
+      <div class="lg:col-span-2 card p-4">
+        <div id="drop" class="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center text-sm text-slate-500">
+          <i class="fa-solid fa-file-arrow-up text-2xl text-teal-700 mb-2"></i>
+          <div>Arrastra un archivo XLSX o CSV</div>
+          <input id="file-import" type="file" accept=".csv,.xlsx,text/csv" class="mt-3 text-xs">
+        </div>
+        <div class="flex flex-wrap gap-2 mt-3">${B("Descargar plantilla", `data-act="download-template"`, "secondary", "fa-solid fa-download")}${B("Cargar ejemplo", `data-act="load-sample"`, "secondary")}</div>
+      </div>
+      <div class="lg:col-span-3 card p-4">
+        <div class="flex gap-4 text-sm mb-3"><span>Válidos <b id="imp-ok">${store.preview?3:0}</b></span><span>Con error <b id="imp-bad">${store.preview?1:0}</b></span></div>
+        <div id="imp-table" class="${store.preview?"":"hidden"} overflow-auto">
+          <table class="w-full text-sm"><thead class="text-left text-slate-500"><tr><th>Fila</th><th>Destino</th><th>Contacto</th><th>Resultado</th></tr></thead>
+          <tbody>
+            <tr class="border-t"><td>2</td><td>Calle 14 #8-22</td><td>Marta Salazar</td><td>${pill("Válido")}</td></tr>
+            <tr class="border-t"><td>3</td><td>Cra 7 #45-12</td><td>Luis Peña</td><td>${pill("Válido")}</td></tr>
+            <tr class="border-t"><td>4</td><td class="text-slate-400">(vacío)</td><td>Ana Ruiz</td><td>${pill("Error: falta dirección")}</td></tr>
+            <tr class="border-t"><td>5</td><td>Av. Suba #112-30</td><td>Sofía León</td><td>${pill("Válido")}</td></tr>
+          </tbody></table>
+        </div>
+        <p id="imp-empty" class="${store.preview?"hidden":""} text-sm text-slate-500">Aún no hay vista previa. Carga un archivo o usa el ejemplo.</p>
+        <div class="mt-4">${B("Importar pedidos", `id="imp-btn" data-act="import-go" ${store.preview?"":"disabled"}`, "primary")}</div>
+      </div>
+    </div>`, "");
+  return appShell("UI-010", body);
+},
+"UI-011"(){
+  const cards = store.templates.map(t => `<button type="button" data-act="pick-template" data-name="${esc(t.name)}" class="card p-4 text-left ${store.template===t.name?"ring-2 ring-teal-600":""}">
+    <div class="font-semibold">${esc(t.name)}</div>
+    <div class="text-sm text-slate-500 mt-1">Origen: ${esc(t.origin)}</div>
+    <div class="text-sm text-slate-500">Destino: ${esc(t.dest)}</div>
+    <div class="text-sm mt-2">Contacto: ${esc(t.contact)} · ${esc(t.pack)}</div>
+    <div class="text-xs text-slate-500 mt-1">${esc(t.notes)} · ${esc(t.window)}</div>
+  </button>`).join("");
+  const cur = store.templates.find(t => t.name === store.template) || store.templates[0];
+  const dis = store.editingTemplate ? "" : "disabled";
+  const body = page("Frecuentes", "Plantillas de pedidos", `
+    <div class="grid lg:grid-cols-2 gap-3 mb-4">${cards}</div>
+    <div class="card p-4 grid md:grid-cols-2 gap-3">
+      ${field("Nombre de plantilla", `<input class="inp" id="tpl-name" ${dis} value="${esc(cur.name)}">`)}
+      ${field("Origen", `<input class="inp" id="tpl-origin" ${dis} value="${esc(cur.origin)}">`)}
+      ${field("Destino", `<input class="inp" id="tpl-dest" ${dis} value="${esc(cur.dest)}">`)}
+      ${field("Contacto", `<input class="inp" id="tpl-contact" ${dis} value="${esc(cur.contact)}">`)}
+      ${field("Paquete", `<input class="inp" id="tpl-pack" ${dis} value="${esc(cur.pack)}">`)}
+      ${field("Instrucciones", `<input class="inp" id="tpl-notes" ${dis} value="${esc(cur.notes)}">`)}
+    </div>
+  `, `${B("Editar datos", `data-act="edit-template"`, "secondary", "fa-solid fa-pen")}${B(store.editingTemplate?"Guardar plantilla":"Crear pedido desde plantilla", store.editingTemplate?`data-act="save-template"`:`data-go="UI-007" data-act="use-template"`, "primary")}`);
+  return appShell("UI-011", body);
+},
+"UI-012"(){
+  const o = order();
+  const hero = o.id === "SE-48213";
+  const body = page(o.id, "Detalle de pedido", `
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 space-y-3">
+        <div class="card p-4 flex flex-wrap gap-3 items-center justify-between">
+          <div><div class="text-sm text-slate-500">${esc(o.dest)}</div><div class="text-lg font-semibold">${money(o.amount)} · ${esc(o.window)}</div></div>
+          ${pill(o.status)}
+        </div>
+        <div class="card p-4">
+          <h2 class="font-semibold mb-3">Historial</h2>
+          <ol class="text-sm space-y-2 border-l-2 border-teal-100 ml-2 pl-4">
+            <li><b>11:42</b> Pedido recibido</li>
+            <li><b>11:50</b> Asignado a Carlos Méndez</li>
+            <li><b>12:40</b> En camino</li>
+            ${o.status==="Entregado" ? `<li><b>14:05</b> Llegó a la dirección</li><li><b>14:07</b> Entregado</li>` : `<li class="text-slate-400">Entrega pendiente</li>`}
+            ${o.status==="Cancelado" ? `<li>Pedido cancelado</li>` : ""}
+          </ol>
+        </div>
+        <div class="card p-4">
+          <h2 class="font-semibold mb-2">Evidencia</h2>
+          ${o.status==="Entregado" || store.evidenceSaved && hero ? `<div class="grid sm:grid-cols-2 gap-3 text-sm"><div class="bg-slate-50 rounded-lg p-3"><i class="fa-solid fa-signature mr-2"></i>Firma de Marta Salazar · 14:07</div><div class="bg-slate-50 rounded-lg p-3"><i class="fa-solid fa-camera mr-2"></i>Foto en puerta · Apto 302</div></div>` : `<p class="text-sm text-slate-500">Aún no hay POD. La evidencia se adjunta al confirmar la entrega.</p>`}
+        </div>
+      </div>
+      <div class="card p-4 h-fit space-y-2">
+        <div class="text-sm"><span class="lbl">Contacto</span>${esc(o.contact)} · ${esc(o.phone)}</div>
+        <div class="text-sm"><span class="lbl">Paquetes</span>${o.packages} · ${esc(o.weight)} · prioridad ${pill(o.priority)}</div>
+        <div class="grid grid-cols-2 gap-2 pt-2">
+          ${B("Modificar", `data-go="UI-013"`, "secondary")}
+          ${B("Cancelar pedido", `data-go="UI-014"`, "secondary")}
+          ${B("Reprogramar", `data-go="UI-015"`, "secondary")}
+          ${B("Pagar", `data-go="UI-016"`, "secondary")}
+          ${B("Repetir", `data-go="UI-007"`, "secondary")}
+          ${B("Reportar problema", `data-go="UI-035"`, "danger")}
+        </div>
+        ${B("Seguimiento en vivo", `data-go="UI-029"`, "primary", "fa-solid fa-location-dot")}
+      </div>
+    </div>`, "");
+  return appShell("UI-012", body);
+},
+"UI-013"(){
+  const o = order();
+  const body = page(o.id + " · editable hasta " + store.editUntil, "Modificar pedido", `
+    <div class="grid lg:grid-cols-2 gap-4">
+      <div class="card p-4 space-y-3">
+        <div class="flex justify-between text-sm"><span>Estado ${pill(o.status)}</span><span>Tiempo límite: ${store.editUntil}</span></div>
+        ${field("Dirección de entrega", `<input class="inp" id="edit-addr" value="${esc(o.dest)}">`)}
+        ${field("Franja horaria", `<select class="sel" id="edit-win"><option>13:00 – 15:00</option><option>15:00 – 17:00</option><option>17:00 – 19:00</option></select>`)}
+        ${field("Nombre de quien recibe", `<input class="inp" id="edit-name" value="${esc(o.contact)}">`)}
+        ${field("Teléfono", `<input class="inp" id="edit-phone" value="${esc(o.phone)}">`)}
+        ${field("Instrucciones", `<textarea class="area" id="edit-notes">Portería, apto 302. Caja frágil.</textarea>`)}
+        <p id="edit-cost" class="hidden text-sm bg-amber-50 border border-amber-100 rounded-lg p-3">El cambio de zona suma <b>$4.200</b> al envío.</p>
+      </div>
+      <div class="card p-4">
+        <h2 class="font-semibold mb-2">Campos bloqueados</h2>
+        <ul class="text-sm space-y-2 text-slate-500">
+          <li class="lock"><i class="fa-solid fa-lock mr-2"></i>Productos · 2 paquetes</li>
+          <li class="lock"><i class="fa-solid fa-lock mr-2"></i>Origen · Bodega Calle 80 #69-10</li>
+          <li class="lock"><i class="fa-solid fa-lock mr-2"></i>Método de pago · Tarjeta ••42</li>
+        </ul>
+        <p class="text-xs text-slate-500 mt-4">Si el pedido ya fue recogido, la edición se bloquea y puedes contactar a soporte.</p>
+        <div class="flex flex-wrap gap-2 mt-4">${B("Guardar cambios", `data-act="save-edit"`, "primary")}${B("Contactar soporte", `data-go="UI-035"`, "secondary")}</div>
+      </div>
+    </div>`, "");
+  return appShell("UI-013", body);
+},
+"UI-014"(){
+  const o = order();
+  const allowed = o.status !== "Entregado" && o.status !== "Cancelado";
+  const body = page(o.id, "Cancelar pedido", `
+    <div class="max-w-xl card p-5 space-y-3">
+      <div class="flex justify-between"><span class="font-semibold">${o.id}</span>${pill(o.status)}</div>
+      <div class="text-sm ${allowed?"text-emerald-700":"text-rose-700"}">${allowed ? "La cancelación está permitida en este estado." : "La política no permite cancelar un pedido " + o.status.toLowerCase() + "."}</div>
+      ${field("Motivo (obligatorio)", `<select class="sel" id="cancel-reason" ${allowed?"":"disabled"}><option value="">Elige un motivo</option><option>Ya no lo necesito</option><option>Dirección incorrecta</option><option>Encontré otro servicio</option><option>El cliente no estará</option></select>`)}
+      <dl class="text-sm bg-slate-50 rounded-xl p-3 space-y-1">
+        <div class="flex justify-between"><dt>Valor pagado</dt><dd>${money(o.amount)}</dd></div>
+        <div class="flex justify-between"><dt>Cargo por cancelación (10%)</dt><dd>${money(Math.round(o.amount*.1))}</dd></div>
+        <div class="flex justify-between font-semibold"><dt>Reembolso a tarjeta ••42 · 3 a 5 días</dt><dd>${money(o.amount - Math.round(o.amount*.1))}</dd></div>
+      </dl>
+      <button type="button" class="btn btn-ghost text-sm" data-act="policy"><i class="fa-solid fa-scale-balanced"></i>Política de cancelación</button>
+      <div class="flex gap-2">${B("Cancelar pedido", `data-act="do-cancel" ${allowed?"":"disabled"}`, "danger")}${B("Mantener pedido", `data-go="UI-012"`, "secondary")}</div>
+    </div>`, "");
+  return appShell("UI-014", body);
+},
+"UI-015"(){
+  const o = order();
+  const body = page(o.id, "Reprogramar entrega", `
+    <div class="max-w-xl card p-5 space-y-3">
+      <div class="text-sm text-slate-500">Motivo actual: intento fallido / cambio de fecha. Fecha actual: <b>20 oct 2026</b> · ${esc(o.window)}</div>
+      ${field("Motivo", `<select class="sel" id="re-reason"><option>Cliente no estaba</option><option>Cambio solicitado por el comercio</option><option>Dirección inaccesible</option></select>`)}
+      <div class="grid grid-cols-2 gap-2">
+        ${field("Nueva fecha", `<input class="inp" id="re-date" type="date" value="2026-10-21">`)}
+        ${field("Franja horaria", `<select class="sel" id="re-slot"><option>08:00 – 10:00</option><option>10:00 – 12:00</option><option selected>13:00 – 15:00</option><option>15:00 – 17:00</option></select>`)}
+      </div>
+      <div class="text-sm bg-amber-50 border border-amber-100 rounded-lg p-3">Costo adicional: <b>$0</b> si permanece en la misma zona. Cambiar a Express suma $6.500.</div>
+      <div class="flex gap-2">${B("Confirmar reprogramación", `data-act="reprogram"`, "primary")}${B("Atrás", `data-go="UI-012"`, "secondary")}</div>
+    </div>`, "");
+  return appShell("UI-015", body);
+},
+"UI-016"(){
+  const o = order();
+  const paid = store.paid;
+  const body = page(o.id, "Pago y comprobante", `
+    <div class="grid lg:grid-cols-2 gap-4 max-w-4xl">
+      <div class="card p-4">
+        <h2 class="font-semibold mb-3">Desglose</h2>
+        <dl class="text-sm space-y-2">
+          <div class="flex justify-between"><dt>Tarifa base</dt><dd>${money(22000)}</dd></div>
+          <div class="flex justify-between"><dt>Recargo de zona</dt><dd>${money(4200)}</dd></div>
+          <div class="flex justify-between"><dt>Seguro</dt><dd>${money(2400)}</dd></div>
+          <div class="flex justify-between font-semibold text-base border-t pt-2"><dt>Valor del envío</dt><dd>${money(o.amount)}</dd></div>
+        </dl>
+        <div class="mt-4 text-sm">Estado ${paid ? pill("Pagado") : pill("Por pagar")}</div>
+        <div class="text-sm mt-1">N.º de transacción: <b>${paid ? esc(store.txn) : "—"}</b></div>
+      </div>
+      <div class="card p-4 space-y-3" id="pay-box">
+        ${field("Método de pago", `<select class="sel" id="pay-method" ${paid?"disabled":""}><option>Tarjeta ••42</option><option>PSE</option><option>Transferencia</option></select>`)}
+        <p id="pay-fail" class="hidden text-sm text-rose-600">El pago fue rechazado. Intenta de nuevo o cambia el medio.</p>
+        <div class="flex gap-2">${B("Pagar", `data-act="pay" ${paid?"disabled":""}`, "primary", "fa-solid fa-credit-card")}${B("Descargar comprobante", `data-act="receipt"`, "secondary", "fa-solid fa-download")}</div>
+        ${paid ? `<div class="text-sm text-emerald-700 bg-emerald-50 rounded-lg p-3">Pago aprobado. ${esc(store.txn)}</div>` : ""}
+      </div>
+    </div>
+    <div class="mt-4">${B("Volver al pedido", `data-go="UI-012"`, "ghost")}</div>`, "");
+  return appShell("UI-016", body);
+},
+"UI-017"(){
+  const kpis = [["Pedidos totales","186","+12 hoy"],["Pendientes","42","por asignar"],["En ruta","67","activos"],["Entregados","71","82% del día"],["Retrasados","6","requieren acción"],["Incidencias","3","abiertas"],["Repartidores libres","14","de 22"],["Cumplimiento SLA","94%","meta 95%"]];
+  const alerts = [
+    ["SE-48301","Retrasado","Chicó","Andrés Ruiz","Express fuera de ventana","UI-019","Reasignar"],
+    ["SE-48220","Pendiente","Candelaria","Sin asignar","Listo para despacho","UI-018","Asignar"],
+    ["SE-48410","Pendiente","Teusaquillo","Sin asignar","Prioridad alta","UI-018","Asignar"],
+    ["SE-48213","En camino","Chapinero","Carlos Méndez","ETA 14:20","UI-012","Ver detalle"]
+  ];
+  const rows = alerts.map(a => `<tr class="border-t border-slate-100" data-row data-search="${a[0]} ${a[3]}" data-status="${a[1]}" data-zone="${a[2]}" data-fleet="${a[3]}">
+    <td class="py-2 font-mono text-xs">${a[0]}</td><td>${pill(a[1])}</td><td>${a[2]}</td><td>${a[3]}</td><td class="text-slate-500">${a[4]}</td>
+    <td>${B(a[6], `data-go="${a[5]}" data-order="${a[0]}"`, a[5]==="UI-019"?"danger":"secondary")}</td></tr>`).join("");
+  const body = page("Operación de hoy", "Dashboard operativo", `
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">${kpis.map(k => `<div class="card p-3"><div class="text-[11px] text-slate-500">${k[0]}</div><div class="text-2xl font-semibold leading-tight">${k[1]}</div><div class="text-[11px] text-teal-700">${k[2]}</div></div>`).join("")}</div>
+    <div class="grid lg:grid-cols-5 gap-3 mb-4">
+      <div class="card p-3 lg:col-span-2"><div class="text-sm font-semibold mb-1">Entregas por hora</div>
+        <svg viewBox="0 0 280 120" class="w-full h-32">${[18,24,31,28,22,16,12].map((v,i)=>{const bh=v*2.6,x=12+i*38;return `<rect x="${x}" y="${100-bh}" width="26" height="${bh}" rx="4" fill="${i===3?"#0f766e":"#99f6e4"}"/><text x="${x+13}" y="114" text-anchor="middle" font-size="9" fill="#64748b">${8+i}h</text>`}).join("")}</svg>
+      </div>
+      <div class="lg:col-span-3">${svgMap({h:168, route:ROUTE_D, driver:{x:120,y:140}, pins:[{x:78,y:168,n:1},{x:188,y:108,n:3,color:"#e11d48"},{x:286,y:70,n:5},{x:334,y:52,n:6}]})}</div>
+    </div>
+    <div class="card p-3">
+      <div class="flex flex-wrap gap-2 mb-3">
+        <select class="sel w-auto" data-zone aria-label="Zona"><option value="">Zona: todas</option><option>Chicó</option><option>Candelaria</option><option>Teusaquillo</option><option>Chapinero</option></select>
+        <select class="sel w-auto" data-status aria-label="Estado"><option value="">Estado: todos</option><option>Retrasado</option><option>Pendiente</option><option>En camino</option></select>
+        <select class="sel w-auto" data-fleet aria-label="Repartidor"><option value="">Repartidor: todos</option><option>Andrés Ruiz</option><option>Carlos Méndez</option><option>Sin asignar</option></select>
+      </div>
+      <div class="text-sm font-semibold mb-2">Alertas críticas</div>
+      <table class="w-full text-sm"><thead class="text-left text-slate-500"><tr><th>Pedido</th><th>Estado</th><th>Zona</th><th>Repartidor</th><th>Alerta</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+      <p data-empty class="hidden text-sm text-slate-500 py-4 text-center">Ninguna alerta con ese filtro.</p>
+    </div>`, `${B("Asignar pedido", `data-go="UI-018"`, "primary")}${B("Lotes", `data-go="UI-020"`, "secondary")}`);
+  return appShell("UI-017", body);
+},
+"UI-018"(){
+  const pending = store.orders.filter(o => o.status === "Pendiente" || o.status === "Retrasado");
+  const people = store.assignType === "equipo" ? TEAMS : DRIVERS;
+  const cards = pending.map(o => `<button type="button" data-act="pick-order" data-id="${o.id}" class="min-w-[200px] text-left card p-3 ${store.assignOrder===o.id?"ring-2 ring-teal-600":""}"><div class="font-mono text-xs">${o.id}</div><div class="font-semibold text-sm">${esc(o.dest)}</div><div class="mt-1 flex gap-1">${pill(o.priority)}${pill(o.status)}</div><div class="text-xs text-slate-500 mt-1">${o.packages} paq. · ${esc(o.weight)} · ${esc(o.window)}</div></button>`).join("");
+  const list = people.map(d => `<button type="button" data-act="pick-driver" data-name="${esc(d.name)}" class="w-full text-left card p-3 mb-2 ${store.assignDriver===d.name?"ring-2 ring-teal-600":""} ${d.eta==="9 min"||d.eta==="11 min"?"bg-emerald-50":""}">
+    <div class="flex justify-between gap-2"><b>${esc(d.name)}</b><span class="text-xs">${d.eta==="9 min"||d.eta==="11 min"?"Menor tiempo":""}</span></div>
+    <div class="text-xs text-slate-500">${esc(d.vehicle)} · ${esc(d.zone)} · ${d.active} pedidos</div>
+    <div class="hbar mt-2"><span style="width:${Math.round(d.load*100)}%"></span></div>
+    <div class="text-xs mt-1">Carga ${Math.round(d.load*100)}% · ETA ${d.eta} · ${d.dist}</div>
+  </button>`).join("");
+  const chosen = store.orders.find(o => o.id === store.assignOrder);
+  const body = page("Hola, Julián", "Asignar pedido", `
+    <div class="grid grid-cols-3 gap-2 mb-4 text-sm">
+      <div class="card p-3">Pendientes <b class="block text-xl">${store.orders.filter(o=>o.status==="Pendiente").length}</b></div>
+      <div class="card p-3">En ruta <b class="block text-xl">${store.orders.filter(o=>o.status==="En camino"||o.status==="Asignado").length}</b></div>
+      <div class="card p-3">Repartidores libres <b class="block text-xl">14</b></div>
+    </div>
+    <div class="text-sm font-semibold mb-2">1 · Pedido</div>
+    <div class="flex gap-2 overflow-auto pb-2 mb-4">${cards}</div>
+    <div class="text-sm font-semibold mb-2">2 · Asignar a</div>
+    <div class="flex gap-2 mb-3">${B("Repartidor", `data-act="assign-type" data-kind="repartidor"`, store.assignType==="repartidor"?"primary":"secondary")}${B("Equipo", `data-act="assign-type" data-kind="equipo"`, store.assignType==="equipo"?"primary":"secondary")}</div>
+    <div class="grid lg:grid-cols-2 gap-3">${list}</div>
+    <div class="card p-3 mt-3 flex flex-wrap items-center justify-between gap-2">
+      <div class="text-sm">Pedido <b>${esc(store.assignOrder)}</b> · ${esc(chosen?chosen.dest:"")} <br>Entrega estimada con <b>${esc(store.assignDriver)}</b></div>
+      ${B("Asignar pedido", `data-act="do-assign"`, "primary")}
+    </div>`, "");
+  return appShell("UI-018", body);
+},
+"UI-019"(){
+  const o = store.orders.find(x => x.id === "SE-48301");
+  const list = DRIVERS.filter(d => d.name !== "Andrés Ruiz").map(d => `<button type="button" data-act="pick-driver" data-name="${esc(d.name)}" class="w-full text-left card p-3 ${store.reassignDriver===d.name?"ring-2 ring-teal-600":""}">
+    <b>${esc(d.name)}</b><div class="text-xs text-slate-500">${esc(d.vehicle)} · carga ${Math.round(d.load*100)}% · ${d.dist} · ETA ${d.eta}</div>
+    <div class="hbar mt-2"><span style="width:${Math.round(d.load*100)}%"></span></div>
+  </button>`).join("");
+  const body = page(o.id, "Reasignar pedido", `
+    <div class="grid lg:grid-cols-2 gap-4">
+      <div class="card p-4 text-sm space-y-2">
+        <div>Pedido actual <b>${o.id}</b> · ${esc(o.dest)}</div>
+        <div>Repartidor actual <b>Andrés Ruiz</b> · bicicleta · carga 85%</div>
+        <div>Motivo de no completarlo: ventana Express vencida y carga al límite.</div>
+        ${field("Motivo de reasignación", `<select class="sel" id="re-why"><option>Repartidor no puede completar</option><option>Avería del vehículo</option><option>Ausencia del repartidor</option><option>Mejor ETA disponible</option></select>`)}
+      </div>
+      <div>
+        <div class="text-sm font-semibold mb-2">Disponibles</div>
+        ${list}
+        <div class="flex gap-2 mt-3">${B("Confirmar reasignación", `data-act="do-reassign"`, "primary")}${B("Cancelar", `data-go="UI-017"`, "secondary")}</div>
+      </div>
+    </div>`, "");
+  return appShell("UI-019", body);
+},
+"UI-020"(){
+  const c = store.criteria;
+  const loose = !c.horario || store.moved;
+  const body = page("Batching del día", "Agrupación en lotes", `
+    <div class="flex flex-wrap gap-2 mb-3 text-sm">
+      ${["zona","capacidad","horario"].map(k => `<button type="button" data-act="criterion" data-key="${k}" class="btn ${c[k]?"btn-primary":"btn-secondary"}">${c[k]?"●":"○"} ${k[0].toUpperCase()+k.slice(1)}</button>`).join("")}
+      <span class="pill st-ok">Ahorro ${!c.zona || !c.capacidad ? "9.1 km" : "18.4 km"}</span>
+      <span class="pill st-norm">${loose ? "4 lotes" : "3 lotes"}</span>
+    </div>
+    <div class="grid lg:grid-cols-5 gap-3">
+      <div class="lg:col-span-3">${svgMap({h:280, pins:[{x:90,y:150,n:"A",color:"#0f766e"},{x:120,y:170,n:"A",color:"#0f766e"},{x:200,y:100,n:"B",color:"#2563eb"},{x:230,y:80,n:"B",color:"#2563eb"},{x:300,y:60,n:"C",color:"#d97706"},{x:40,y:190,n:"?",color: loose?"#e11d48":"#94a3b8"}]})}</div>
+      <div class="lg:col-span-2 space-y-2 text-sm">
+        <div class="card p-3"><b class="text-teal-800">Lote A · Chapinero</b><div>4 pedidos · Van NKT 908 · capacidad 71%</div><div>Ventana 13:00 – 16:00</div></div>
+        <div class="card p-3"><b class="text-blue-800">Lote B · Centro</b><div>3 pedidos · Moto HJK 331 · capacidad 54%</div><div>Ventana 14:00 – 17:00</div></div>
+        <div class="card p-3"><b class="text-amber-800">Lote C · Norte</b><div>3 pedidos · Moto RWD 24A · capacidad 62%</div><div>Ventana 15:00 – 18:00</div></div>
+        <div class="card p-3 ${loose?"":"opacity-60"}"><b>Sin agrupar</b><div>${loose ? "SE-48410 · ventana incompatible con el lote B" : "Ningún pedido quedó fuera"}</div></div>
+        <div class="flex gap-2">${B("Ajustar", `data-act="adjust-batch"`, "secondary")}${B("Confirmar lotes", `data-go="UI-021"`, "primary")}</div>
+      </div>
+    </div>`, "");
+  return appShell("UI-020", body);
+},
+"UI-021"(){
+  const rank = {Express:0, Alta:1, Normal:2};
+  let warn = store.slaOn ? "Secuencia compatible con prioridad y SLA. Cumplimiento estimado 96%." : "La optimización no está forzando prioridad y SLA.";
+  if (store.slaOn) {
+    const prios = store.slaOrder.map(id => SLA[id].prio);
+    for (let i = 1; i < prios.length; i++) if (rank[prios[i]] < rank[prios[i-1]]) warn = "Este cambio rompe un SLA: " + store.slaOrder[i] + " (" + prios[i] + ") quedó detrás de una prioridad menor.";
+  }
+  const items = store.slaOrder.map((id, i) => {
+    const s = SLA[id];
+    return `<li draggable="true" data-id="${id}" class="p-3 flex gap-3 items-center bg-white border border-slate-200 rounded-xl mb-2"><i class="fa-solid fa-grip-vertical text-slate-400"></i><span class="tag-ui">${i+1}</span><div class="flex-1"><b class="text-sm">${id}</b> <span class="text-xs text-slate-500">${s.addr}</span><div class="text-xs">ETA ${s.eta} · límite ${s.sla} · margen ${s.margin}</div></div>${pill(s.prio)}</li>`;
+  }).join("");
+  const risk = warn.startsWith("Este");
+  const body = page("Lote A", "Prioridad y SLA", `
+    <div class="flex items-center justify-between card p-3 mb-3"><div><b>Respetar prioridad y SLA</b><div class="text-xs text-slate-500">Express y Alta se atienden antes que Normal</div></div><button type="button" class="switch ${store.slaOn?"on":""}" data-act="sla-toggle" role="switch" aria-checked="${store.slaOn}"></button></div>
+    <div class="grid grid-cols-3 gap-2 mb-3 text-sm"><div class="card p-3">SLA cumplido <b class="block text-xl">${risk?"88%":"96%"}</b></div><div class="card p-3">En riesgo <b class="block text-xl">${risk?1:0}</b></div><div class="card p-3">Costo de ruta <b class="block text-xl">$64.200</b></div></div>
+    <p class="text-sm mb-2 ${risk?"text-rose-700":"text-emerald-700"}">${warn}</p>
+    <ul id="sla-list" class="drag">${items}</ul>
+    <div class="mt-3">${B("Aplicar secuencia", `data-act="apply-seq"`, "primary")}</div>`, "");
+  return appShell("UI-021", body);
+},
+"UI-022"(){
+  const rows = store.vehicles.map(v => `<tr class="border-t border-slate-100" data-row data-search="${v.plate} ${v.driver}" data-status="${v.status}" data-type="${v.type}" data-fleet="${v.type}">
+    <td class="py-2 font-mono text-xs">${v.plate}</td><td>${v.type}</td><td>${v.cap}</td><td>${pill(v.status)}</td><td>${esc(v.driver)}</td><td>${v.km} km</td><td>${v.maint}</td>
+    <td>${B("Editar vehículo", `data-act="edit-vehicle" data-plate="${v.plate}"`, "secondary")}</td></tr>`).join("");
+  const cur = store.vehicles.find(v => v.plate === store.editPlate);
+  const body = page("Operaciones", "Flota de vehículos", `
+    <div class="flex flex-wrap gap-2 mb-3">
+      <select class="sel w-auto" data-status aria-label="Estado"><option value="">Estado</option><option>Disponible</option><option>En ruta</option><option>Mantenimiento</option></select>
+      <select class="sel w-auto" data-fleet aria-label="Tipo"><option value="">Tipo</option><option>Moto</option><option>Van</option><option>Bicicleta</option><option>Camión</option></select>
+    </div>
+    <div class="card overflow-auto mb-3"><table class="w-full text-sm px-2"><thead class="text-left text-slate-500"><tr><th class="py-2">Placa</th><th>Tipo</th><th>Capacidad</th><th>Estado</th><th>Repartidor</th><th>Km</th><th>Mantenimiento</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+    <p data-empty class="hidden p-4 text-sm text-center text-slate-500">Ningún vehículo con ese filtro.</p></div>
+    ${cur ? `<div class="card p-4 max-w-lg space-y-2"><div class="font-semibold">${cur.plate} · ${cur.type} · peso máx. ${cur.cap}</div>
+      ${field("Estado", `<select class="sel" id="veh-status"><option ${cur.status==="Disponible"?"selected":""}>Disponible</option><option ${cur.status==="En ruta"?"selected":""}>En ruta</option><option ${cur.status==="Mantenimiento"?"selected":""}>Mantenimiento</option></select>`)}
+      ${field("Repartidor asignado", `<input class="inp" id="veh-driver" value="${esc(cur.driver)}">`)}
+      <p class="text-xs text-slate-500">Si queda en mantenimiento, el despacho no le asigna rutas.</p>
+      ${B("Guardar vehículo", `data-act="save-vehicle"`, "primary")}</div>` : `<p class="text-sm text-slate-500">Selecciona un vehículo para editarlo.</p>`}
+  `, "");
+  return appShell("UI-022", body);
+},
+"UI-023"(){
+  const label = store.shift === "disponible" ? "Disponible" : store.shift === "pausa" ? "En pausa" : "Fuera de turno";
+  const start = store.shiftStart ? new Date(store.shiftStart).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"}) : "—";
+  const body = `
+    <div class="card p-4 mb-3"><div class="text-xs text-slate-500">Estado</div><div class="text-2xl font-semibold">${label}</div><div class="mt-2">${pill(label === "Disponible" ? "Disponible" : label === "En pausa" ? "En pausa" : "Fuera de turno")}</div></div>
+    <div class="grid grid-cols-2 gap-2 mb-3 text-sm">
+      <div class="card p-3">Hora de inicio <b class="block">${start}</b></div>
+      <div class="card p-3">Tiempo trabajado <b class="block" id="shift-clock">${store.shift==="fuera"?"—":fmtDur(Date.now()-store.shiftStart)}</b></div>
+      <div class="card p-3">Pedidos activos <b class="block">4</b></div>
+      <div class="card p-3">Zona asignada <b class="block">Chapinero</b></div>
+    </div>
+    <div class="flex flex-col gap-2">
+      ${B(store.shift==="fuera"?"Iniciar turno":"Ver mi ruta", `data-act="shift" data-kind="start"`, "primary", "fa-solid fa-play")}
+      ${B(store.shift==="pausa"?"Reanudar":"Pausar", `data-act="shift" data-kind="pause"`, "secondary", "fa-solid fa-pause")}
+      ${B("Finalizar turno", `data-act="shift" data-kind="end"`, "danger")}
+    </div>
+    <p class="text-xs text-slate-500 mt-3">En pausa o fuera de turno no recibes nuevas asignaciones.</p>`;
+  return phoneShell("Mi turno", body, "UI-023");
+},
+"UI-024"(){
+  const done = store.deliveredStops || [];
+  const next = store.stops.find(s => !done.includes(s.n)) || null;
+  const kmLeft = Math.max(0, 12.6 - done.length * 2.1).toFixed(1);
+  const pins = store.stops.map(s => ({x:s.x, y:s.y, n:s.n, color: done.includes(s.n) ? "#94a3b8" : (next && s.n===next.n ? "#0f766e" : "#0f172a")}));
+  const list = store.stops.map(s => `<button type="button" data-go="UI-025" data-stop="${s.n}" class="w-full text-left py-2 border-b border-slate-100 flex gap-2 items-start">
+    <span class="tag-ui mt-0.5">${s.n}</span><span class="flex-1 min-w-0"><span class="flex items-start justify-between gap-2"><b class="text-sm">${esc(s.addr)}</b>${pill(done.includes(s.n)?"entregada": (next&&s.n===next.n?"siguiente":"pendiente"))}</span><span class="text-xs text-slate-500">${s.pkgs.length} paq. · ${esc(s.window)} · ETA ${s.eta} · ${s.dist}</span></span></button>`).join("");
+  const body = `
+    <div class="flex justify-between text-sm mb-2"><span><b>6 paradas</b> · 12.6 km · 2 h 10 min</span></div>
+    <div class="text-xs bg-emerald-50 text-emerald-800 rounded-lg p-2 mb-2">Ahorro por optimización: 4.8 km y 22 min frente al orden original.</div>
+    <div class="text-xs mb-2">Progreso ${done.length}/6 · ${kmLeft} km restantes</div>
+    <div class="hbar mb-2"><span style="width:${(done.length/6)*100}%"></span></div>
+    ${svgMap({h:190, route:ROUTE_D, driver:{x: next? Math.max(40, (store.stops.find(s=>s.n===next.n)||store.stops[0]).x - 28): 360, y: next? Math.min(200,(store.stops.find(s=>s.n===next.n)||store.stops[0]).y + 20): 48}, pins})}
+    <div class="mt-2">${list}</div>
+    ${next ? `<div class="card p-3 mt-3 text-sm">Siguiente parada<br><b>${esc(next.addr)}</b><div class="text-xs text-slate-500">Llegada estimada ${next.eta}</div>
+      <div class="flex flex-wrap gap-2 mt-2">${B("Navegar", `data-go="UI-025" data-stop="${next.n}"`, "primary")}${B("Marcar entregada", `data-go="UI-027" data-stop="${next.n}"`, "secondary")}</div></div>
+      <div class="mt-2">${B("Desvío detectado", `data-go="UI-026"`, "danger", "fa-solid fa-triangle-exclamation")}</div>`
+      : `<div class="card p-4 mt-3 text-center"><b>Ruta completada</b><p class="text-sm text-slate-500">Los botones de navegación quedan inactivos.</p></div>`}`;
+  return phoneShell("Mi ruta de hoy", body, "UI-024");
+},
+"UI-025"(){
+  const s = stop();
+  const ins = store.instructions.map((it,i) => `<button type="button" data-act="read-ins" data-i="${i}" class="w-full text-left text-sm py-2 border-b border-slate-100 ${it.ok?"line-through text-slate-400":""}"><i class="fa-regular ${it.ok?"fa-square-check":"fa-square"} mr-2"></i>${esc(it.t)}</button>`).join("");
+  const pkgs = s.pkgs.map((p,i) => `<label class="flex items-center gap-2 text-sm py-1"><input type="checkbox" data-pkg="${i}"> ${esc(p.t)} · guía ${p.g}</label>`).join("");
+  const body = `
+    <div class="flex justify-between items-center mb-2"><span class="text-xs font-semibold text-teal-700">Parada ${s.n} de 6</span>${pill(s.status==="siguiente"?"siguiente":s.status)}</div>
+    <div class="text-sm text-slate-500 mb-2">Hora límite: ${esc(s.window)}</div>
+    <div id="stop-map">${svgMap({h:160, route:"M40 180 C80 140 120 100 "+s.x+" "+s.y, driver:{x:48,y:190}, pins:[{x:s.x,y:s.y,n:s.n}]})}</div>
+    <h2 class="font-semibold mt-3">${esc(s.addr)}</h2>
+    <p class="text-sm text-slate-600">${esc(s.barrio)}, Bogotá · ${esc(s.apt)} · piso ${esc(s.piso)}<br>Referencia: ${esc(s.ref)} · ${esc(s.dist)}</p>
+    <div class="pair-acts my-2">${B("Copiar dirección", `data-act="copy" data-text="${esc(s.addr+", "+s.barrio)}"`,"secondary")}${B("Abrir mapa", `data-act="open-map"`, "secondary")}</div>
+    <div class="text-sm font-semibold mt-2">Instrucciones de llegada</div>${ins}
+    <div class="card p-3 mt-3 text-sm"><b>${esc(s.contact)}</b><div>${esc(s.phone)}</div><div class="pair-acts mt-2">${B("Llamar", `data-act="call"`, "secondary", "fa-solid fa-phone")}${B("WhatsApp", `data-act="whatsapp"`, "secondary", "fa-brands fa-whatsapp")}</div></div>
+    <div class="mt-3 text-sm font-semibold">Paquetes a entregar (${s.pkgs.length})</div>${pkgs}
+    <div class="stop-bar">${B("Problema", `data-go="UI-028"`, "secondary")}${B("Llegué al punto", `data-go="UI-027"`, "primary")}</div>`;
+  return phoneShell("Detalle de parada", body, "UI-024");
+},
+"UI-026"(){
+  const body = `
+    <div class="bg-rose-600 text-white text-sm rounded-lg px-3 py-2 mb-2 flex justify-between"><span>Fuera de ruta</span><b>100 m</b></div>
+    ${svgMap({h:230, route:"M40 190 C90 150 140 120 188 108 C230 96 270 80 320 60", routeColor:"#f97316", alt:"M90 150 C70 80 40 70 30 40", driver:{x:36,y:48}, pins:[{x:250,y:86,n:3,color:"#0f172a"}]})}
+    <div class="card p-3 mt-3"><b>Te desviaste de la ruta</b>
+      <p class="text-sm text-slate-600 mt-1">Distancia de desvío: 100 m. Retraso estimado en la parada 3: unos 3 min.</p>
+      <p class="text-xs text-slate-500 mt-1">Línea naranja: ruta asignada. Línea roja: trayecto real.</p>
+    </div>
+    <div class="flex flex-col gap-2 mt-3">${B("Volver a la ruta", `data-act="deviate" data-mode="back"`, "primary")}${B("Recalcular", `data-act="deviate" data-mode="recalc"`, "secondary")}${B("Desvío autorizado", `data-act="deviate" data-mode="ok"`, "secondary")}</div>`;
+  return phoneShell("Alerta de desvío", body, "UI-024");
+},
+"UI-027"(){
+  const s = stop();
+  const tab = store.podTab || "firma";
+  const ev = store.evidence;
+  const badge = (k, label) => `<span class="pill ${ev[k]?"st-ok":"st-pend"}">${label}: ${ev[k]?"lista":"pendiente"}</span>`;
+  const body = `
+    <div class="text-xs font-semibold text-teal-700 mb-1">Parada ${s.n} de 6</div>
+    <div class="text-sm mb-2"><b>${esc(s.addr)}</b> · ${esc(s.apt)}<br>${s.pkgs.length} paquetes · guías ${s.pkgs.map(p=>p.g).join(", ")} · ${esc(s.contact)}</div>
+    <div class="pod-badges">${badge("firma","Firma")}${badge("foto","Foto")}${badge("codigo","Código")}</div>
+    <div data-tabs>
+      <div class="flex border-b mb-2">
+        ${["firma","foto","codigo"].map(n => `<button type="button" class="tab ${tab===n?"on":""}" data-act="tab" data-tab="${n}">${n[0].toUpperCase()+n.slice(1)}</button>`).join("")}
+      </div>
+      <div data-panel="firma" class="${tab==="firma"?"":"hidden"}">
+        <canvas id="signpad" class="w-full rounded-xl border border-dashed border-slate-300 bg-slate-50 touch-none" style="height:140px"></canvas>
+        ${field("Nombre de quien recibe", `<input class="inp mt-2" id="recv-name" value="${esc(store.receiver)}" placeholder="Marta Salazar">`)}
+        <div class="sign-actions">${B("Borrar", `data-act="clear-sign"`, "secondary")}${B("Guardar firma", `data-act="save-sign"`, "primary")}</div>
+      </div>
+      <div data-panel="foto" class="${tab==="foto"?"":"hidden"}">
+        <div id="photo-box" class="h-40 rounded-xl border border-slate-200 grid place-items-center text-sm text-slate-500 ${ev.foto?"bg-amber-100":"bg-slate-100"}">${ev.foto?"Foto guardada · puerta del apartamento":"Cámara lista"}</div>
+        <div class="pod-actions">${B("Tomar foto", `data-act="take-photo"`, "primary", "fa-solid fa-camera")}${B("Repetir foto", `data-act="retake-photo"`, "secondary")}${B("Foto de ejemplo", `data-act="sample-photo"`, "secondary")}</div>
+      </div>
+      <div data-panel="codigo" class="${tab==="codigo"?"":"hidden"}">
+        <div class="flex gap-2 justify-center my-2" id="code-boxes">${[0,1,2,3].map(i => `<div class="w-12 h-14 rounded-lg border border-slate-300 grid place-items-center text-xl font-semibold">${esc(store.code[i]||"")}</div>`).join("")}</div>
+        <p class="text-center text-xs ${store.codeLocked?"text-rose-600":"text-slate-500"}">${store.codeLocked?"Sin intentos. Usa firma o foto.": store.evidence.codigo?"Código correcto":"Código SMS de 4 dígitos · intentos "+store.codeAttempts+"/3"}</p>
+        <div class="grid grid-cols-3 gap-2 justify-items-center mt-2">${[1,2,3,4,5,6,7,8,9,"del",0,"ok"].map(d => d==="ok" ? `<span></span>` : `<button type="button" class="key" data-act="key" data-digit="${d}" ${store.codeLocked?"disabled":""}>${d==="del"?"⌫":d}</button>`).join("")}</div>
+      </div>
+    </div>
+    <p class="pod-note">${[ev.firma,ev.foto,ev.codigo].filter(Boolean).length} evidencia(s) lista(s). ${[ev.firma,ev.foto,ev.codigo].some(Boolean)?"Ya puedes confirmar.":"Agrega al menos una evidencia."}</p>
+    ${B("Confirmar entrega", `data-act="confirm-delivery" class="w-full"`, "primary")}`;
+  return phoneShell("Confirmar entrega", body, "UI-024");
+},
+"UI-028"(){
+  const s = stop();
+  const body = `
+    <div class="card p-3 text-sm mb-3"><b>Parada ${s.n}</b> · ${esc(s.addr)}<div>${esc(s.contact)} · ${esc(s.window)}</div><div class="text-xs text-slate-500">Pedido SE-48213</div></div>
+    ${field("Tipo de incidencia", `<select class="sel" id="inc-type"><option>Cliente ausente</option><option>Dirección errada</option><option>Sin acceso</option><option>Paquete dañado</option><option>Rechazado</option><option>Otro</option></select>`)}
+    <div class="mt-3 text-sm font-semibold">Fotos</div>
+    <div class="flex gap-2 my-2">${[0,1,2].map(i => `<div class="w-16 h-16 rounded-lg border border-dashed border-slate-300 grid place-items-center text-xs ${i < store.photos ? "bg-amber-100":"bg-slate-50"}">${i < store.photos ? "IMG" : "+"}</div>`).join("")}</div>
+    ${B("Agregar foto", `data-act="add-photo"`, "secondary", "fa-solid fa-camera")}
+    ${field("Nota del repartidor", `<textarea class="area mt-3" id="inc-note" placeholder="Qué ocurrió"></textarea>`)}
+    <ul class="text-xs text-slate-500 mt-2 space-y-1">
+      <li>GPS 4.6489, -74.0622</li><li>Hora 14:06</li><li>Intentos de llamada: ${store.callTries}</li>
+    </ul>
+    ${B("Registrar intento de llamada", `data-act="call-try"`, "ghost")}
+    <div class="mt-3">${B("Enviar a operaciones", `data-act="send-incident"`, "primary")}</div>`;
+  return phoneShell("Reportar incidencia", body, "UI-028");
+},
+"UI-029"(){
+  const body = page("SE-48213", "Seguimiento en vivo", `
+    <div class="grid lg:grid-cols-5 gap-3">
+      <div class="lg:col-span-3">${svgMap({h:320, route:ROUTE_D, driver:{x:132,y:132}, pins:[{x:70,y:40,n:"",color:"#0f766e"},{x:300,y:190,n:"",color:"#e11d48"}]})}
+        <div class="flex justify-between text-xs text-slate-500 mt-1"><span>Comercio</span><span>Actualización cada 5 s</span><span>Tu dirección</span></div>
+      </div>
+      <div class="lg:col-span-2 space-y-3">
+        <div class="card p-4"><div class="text-xs text-slate-500">ETA</div><div class="text-3xl font-semibold">18 min</div><div class="text-sm">Llega sobre las 14:22 · 3.4 km</div>
+          <div class="flex justify-between text-[11px] mt-3 text-slate-500"><span>Confirmado</span><span>Preparado</span><span class="text-teal-700 font-bold">En camino</span><span>Entregado</span></div>
+          <div class="hbar mt-1"><span style="width:66%"></span></div>
+        </div>
+        <div class="card p-4 text-sm"><b>Carlos Méndez</b> · 4.8 ★<div>Moto · placa RWD 24A</div>
+          <div class="flex gap-2 mt-2">${B("Llamar", `data-act="call"`, "secondary", "fa-solid fa-phone")}${B("Chat", `data-act="chat"`, "secondary", "fa-solid fa-comment")}</div>
+        </div>
+        <div class="text-sm">Pedido <b>SE-48213</b></div>
+        <div class="flex flex-wrap gap-2">${B("Compartir seguimiento", `data-go="UI-030"`, "primary")}${B("Configurar aviso", `data-go="UI-031"`, "secondary")}</div>
+      </div>
+    </div>`, "");
+  return appShell("UI-029", body);
+},
+"UI-030"(){
+  const full = store.linkUnlocked;
+  return `<div class="screen h-full overflow-auto bg-slate-50 screen-in">
+    <div class="max-w-md mx-auto p-4">
+      <div class="flex justify-between items-center mb-2"><span class="pill st-norm">Sin cuenta</span><span class="text-xs text-slate-500">Token válido</span></div>
+      <h1 class="text-xl font-semibold">Comercial Andina</h1>
+      <div class="text-sm mb-2">Pedido <b>SE-48213</b> <button type="button" class="btn btn-ghost" data-act="copy" data-text="SE-48213">Copiar código</button></div>
+      ${svgMap({h:180, route:"M40 150 C120 120 180 80 260 60", driver:{x:160,y:100}, pins:[{x:260,y:60,n:"",color:"#e11d48"}]})}
+      <div class="text-sm mt-2">Hora estimada <b>14:22</b></div>
+      <ol class="text-sm mt-3 space-y-1"><li>11:42 Recibido</li><li>11:50 Asignado</li><li class="font-semibold text-teal-800">12:40 En camino</li></ol>
+      <div class="card p-3 mt-3">
+        <div class="text-sm font-semibold mb-1">Dirección</div>
+        <div class="text-sm">${full ? "Calle 14 #8-22, Apto 302, Chapinero" : "Calle 14 #••-••, Chapinero"}</div>
+        ${full ? "" : `<div class="mt-2">${field("Últimos 4 dígitos del teléfono", `<input class="inp" id="phone4" inputmode="numeric" maxlength="4" placeholder="••••">`)}</div>${B("Ver dirección", `data-act="verify-phone"`, "primary")}`}
+      </div>
+      <div class="flex flex-wrap gap-2 mt-3">${B("Pedir nuevo enlace", `data-act="new-link"`, "secondary")}${B("Descargar la app", `data-act="get-app"`, "ghost")}</div>
+    </div>
+  </div>`;
+},
+"UI-031"(){
+  const body = page("SE-48213 · Carlos Méndez", "Aviso de cambio de ETA", `
+    <div class="grid lg:grid-cols-2 gap-4">
+      <div class="card p-4 space-y-3">
+        <div class="text-sm">Hora estimada <b>14:22</b> · estado ${pill("En camino")}</div>
+        <div class="lbl">Umbral de aviso</div>
+        <div class="flex gap-2">${[10,15,30].map(n => `<button type="button" data-act="threshold" data-min="${n}" class="btn ${store.threshold===n?"btn-primary":"btn-secondary"}">${n} min</button>`).join("")}</div>
+        <div class="lbl">Canales de aviso</div>
+        <div class="text-sm">Push y SMS activos. El correo avisa solo si el retraso supera el umbral.</div>
+        ${B("Guardar umbral", `data-act="save-threshold"`, "primary")}
+      </div>
+      <div class="card p-4"><h2 class="font-semibold mb-2">Historial de cambios</h2>
+        <ul class="text-sm space-y-2"><li>12:40 · ETA 14:05 · sin aviso</li><li>13:10 · ETA 14:22 · +17 min · aviso enviado</li><li>13:40 · ETA 14:22 · sin cambio</li></ul>
+      </div>
+    </div>`, "");
+  return appShell("UI-031", body);
+},
+"UI-032"(){
+  const items = [
+    ["Repartidor asignado","Carlos Méndez · Comercial Andina","11:50","asignado"],
+    ["Tu pedido va en camino","Tiempo estimado 18 min","12:40","camino"],
+    ["Pedido entregado","Entregado a las 2:07 p. m.","14:07","entregado"]
+  ];
+  const body = page("Bandeja", "Notificaciones de estado", `
+    <button type="button" class="card p-4 w-full text-left" data-act="expand-notif">
+      <div class="flex justify-between"><b>Pedido SE-48213</b><span class="text-xs text-slate-500">${store.notifOpen?"Ocultar":"Ver 3 avisos"}</span></div>
+      <div class="text-sm text-slate-500">Asignado · En camino · Entregado</div>
+    </button>
+    ${store.notifOpen ? `<div class="mt-2 space-y-2">${items.map(n => `<div class="card p-3 text-sm"><div class="flex justify-between"><b>${n[0]}</b><span class="text-xs text-slate-400">${n[2]}</span></div><div class="text-slate-600">${n[1]}</div><div class="text-xs text-slate-400 mt-1">SE-48213</div>
+      <div class="flex flex-wrap gap-2 mt-2">${B("Abrir mapa en vivo", `data-go="UI-029"`, "secondary")}${n[3]==="entregado" ? B("Calificar", `data-act="rate"`, "secondary") + B("Ver comprobante", `data-go="UI-034"`, "secondary") : ""}</div>
+    </div>`).join("")}</div>` : ""}`, "");
+  return appShell("UI-032", body);
+},
+"UI-033"(){
+  const ch = store.channels;
+  const events = [["asignado","Asignado"],["camino","En camino"],["entregado","Entregado"],["retraso","Retraso"]];
+  const cols = [["push","Push"],["sms","SMS"],["mail","Correo"]];
+  const matrix = `<table class="w-full text-sm"><thead><tr><th></th>${cols.map(c=>`<th class="py-1 ${ch[c[0]]?"":"opacity-30"}" data-col="${c[0]}">${c[1]}</th>`).join("")}</tr></thead><tbody>
+    ${events.map(ev => `<tr class="border-t"><td class="py-2">${ev[1]}</td>${cols.map(c => `<td data-col="${c[0]}" class="${ch[c[0]]?"":"opacity-30"}"><button type="button" class="switch ${store.matrix[ev[0]][c[1]=== "Correo"?"mail":c[0]] && ch[c[0]] ? "on": store.matrix[ev[0]][c[0]]?"on":""}" data-act="matrix" data-ev="${ev[0]}" data-ch="${c[0]}" ${ch[c[0]]?"":"disabled"}></button></td>`).join("")}</tr>`).join("")}
+  </tbody></table>`;
+  const body = page("Perfil › Notificaciones", "Canales de notificación", `
+    <div class="grid lg:grid-cols-2 gap-4">
+      <div class="card p-4 space-y-3">
+        ${[["push","Push","Este dispositivo"],["sms","SMS","310 ••• 0142 · verificado"],["mail","Correo","maria.gomez@comercialandina.com · verificado"]].map(c => `<div class="flex items-center justify-between"><div><b class="text-sm">${c[1]}</b><div class="text-xs text-slate-500">${c[2]}</div></div><button type="button" class="switch ${ch[c[0]]?"on":""}" data-act="switch" data-key="${c[0]}" role="switch" aria-checked="${ch[c[0]]}"></button></div>`).join("")}
+        <p class="text-xs text-amber-700">Al menos un canal debe permanecer activo.</p>
+        ${B("Guardar preferencias", `data-act="save-channels"`, "primary")}
+      </div>
+      <div class="card p-4"><div class="text-sm font-semibold mb-2">Matriz evento × canal</div>${matrix}</div>
+    </div>`, "");
+  return appShell("UI-033", body);
+},
+"UI-034"(){
+  const body = page("SE-48213", "Entrega confirmada", `
+    <div class="max-w-3xl">
+      <div class="card p-4 mb-3 bg-emerald-50 border-emerald-100"><b>Tu pedido fue entregado</b><div class="text-sm">2:07 p. m. · Calle 14 #8-22, Apto 302</div></div>
+      <div class="grid md:grid-cols-2 gap-3">
+        <div class="card p-4 text-sm"><div class="lbl">Quién recibió</div><b>Marta Salazar</b> · MS<div class="text-emerald-700 mt-1">Coincide con el destinatario</div>
+          <ul class="mt-3 space-y-1"><li>Código de 4 dígitos verificado</li><li>Entrega a 12 m de la dirección</li><li>Paquetes 2 de 2 · guías 7781 y 7782</li></ul>
+        </div>
+        <div class="card p-4 text-sm"><div class="lbl">Evidencia</div><div class="bg-slate-50 rounded-lg p-3 mb-2">Firma · Marta Salazar · 2:07 p. m.</div><div class="bg-amber-50 rounded-lg p-3">Foto de la puerta · 2:07 p. m.</div></div>
+        <div class="md:col-span-2">${svgMap({h:180, pins:[{x:180,y:120,n:"",color:"#e11d48"},{x:196,y:128,n:"",color:"#16a34a", r:8}]})}<div class="text-xs text-slate-500">Marcador rojo: tu dirección. Punto verde: confirmación, a 12 m.</div></div>
+        <div class="md:col-span-2 card p-4 text-sm"><div class="font-semibold mb-2">Historial</div>
+          <ol class="space-y-1"><li>11:42 a. m. Recibido</li><li>11:50 a. m. Asignado a Carlos</li><li>12:40 p. m. En camino</li><li>2:05 p. m. Llegó a tu dirección</li><li>2:07 p. m. Entregado a Marta Salazar</li></ol>
+        </div>
+      </div>
+      <div class="mt-4"><div class="font-semibold mb-2">¿Todo salió bien?</div><div class="flex flex-wrap gap-2">${B("Sí, lo recibí", `data-act="received-ok"`, "primary")}${B("Algo no está bien", `data-go="UI-035"`, "danger")}${B("Descargar comprobante", `data-act="pod-pdf"`, "secondary")}</div></div>
+    </div>`, "");
+  return appShell("UI-034", body);
+},
+"UI-035"(){
+  const mode = store.caseMode || "formulario";
+  const body = page("Soporte en línea · respuesta ~5 min", "Reportar un problema", `
+    <div class="grid lg:grid-cols-5 gap-4">
+      <div class="lg:col-span-3 card p-4" data-tabs>
+        <div class="text-sm mb-2">Pedido asociado <b>SE-48213</b> · ${esc(order().status)} · entrega prevista 14:22</div>
+        <div class="flex border-b mb-3"><button type="button" class="tab ${mode==="chat"?"on":""}" data-act="tab" data-tab="chat">Chat</button><button type="button" class="tab ${mode!=="chat"?"on":""}" data-act="tab" data-tab="formulario">Formulario</button></div>
+        <div data-panel="chat" class="${mode==="chat"?"":"hidden"} text-sm">
+          <div class="bg-slate-50 rounded-lg p-2 mb-2">Hola, soy Elena de soporte. Cuéntame qué pasó con el pedido SE-48213.</div>
+          <div id="chat-log" class="space-y-1 mb-2"></div>
+          <div class="flex gap-2"><input class="inp" id="chat-text" placeholder="Escribe un mensaje"><button type="button" class="btn btn-primary" data-act="chat-send">Enviar</button></div>
+        </div>
+        <div data-panel="formulario" class="${mode==="chat"?"hidden":""} space-y-3">
+          ${field("Categoría", `<select class="sel" id="case-cat"><option value="">Elige una categoría</option><option>No llegó</option><option>Llegó dañado</option><option>Falta un producto</option><option>Otro</option></select>`)}
+          ${field("Mensaje", `<textarea class="area" id="case-msg" placeholder="Describe el problema"></textarea>`)}
+          <div class="text-sm">${B("Adjuntar foto", `data-act="add-photo"`, "secondary", "fa-solid fa-paperclip")} <span class="text-slate-500">${store.photos? store.photos+" archivo(s)":"Sin archivos"}</span></div>
+          ${store.caseId ? `<div class="text-sm text-emerald-700">Caso ${esc(store.caseId)} creado.</div>` : ""}
+          <div class="flex flex-wrap gap-2">${B("Enviar", `data-act="send-case"`, "primary")}${B("Elegir solución", `data-act="pick-solution"`, "secondary")}</div>
+          ${store.solution ? `<div class="text-sm">Solución elegida: <b>${esc(store.solution)}</b></div>` : ""}
+        </div>
+      </div>
+      <div class="lg:col-span-2 card p-4 text-sm"><div class="font-semibold mb-2">Soluciones</div><p class="text-slate-500 mb-2">Puedes pedir reembolso o reenvío sin llamar.</p>
+        ${B("Reembolso", `data-act="solution" data-sol="Reembolso"`, "secondary")}${B("Reenvío", `data-act="solution" data-sol="Reenvío"`, "secondary")}
+      </div>
+    </div>`, "");
+  return appShell("UI-035", body);
+},
+"UI-036"(){
+  const id = store.caseId || "CAS-20418";
+  const body = page(id + " · SLA 3 h 20 min", "Ticket de soporte", `
+    <div class="grid lg:grid-cols-3 gap-3">
+      <div class="card p-4 text-sm space-y-1"><div class="flex justify-between"><b>${esc(id)}</b>${pill(store.ticketStatus)}</div><div>Prioridad alta</div><div class="pt-2"><b>María Gómez</b> · 18 pedidos</div><div>Motivo: llegó dañado</div><div class="mt-2 bg-amber-50 rounded-lg p-3">Evidencia del cliente · foto de la caja</div></div>
+      <div class="card p-4 text-sm"><b>Pedido SE-48213</b><div>Comercial Andina · Carlos Méndez · ${money(28600)}</div>
+        <ol class="mt-2 space-y-1 text-slate-600"><li>11:42 Recibido</li><li>11:50 Asignado</li><li>12:40 En camino</li><li>14:07 Entregado</li></ol>
+        ${svgMap({h:120, pins:[{x:180,y:110,n:"",color:"#e11d48"},{x:190,y:118,n:"",color:"#16a34a",r:7}]})}
+        <div class="text-xs">POD a 12 m · firma Marta Salazar · GPS 4.6486, -74.0628</div>
+        <button type="button" class="btn btn-ghost mt-1" data-go="UI-012" data-order="SE-48213">Abrir pedido</button>
+      </div>
+      <div class="card p-4 text-sm space-y-2"><div class="font-semibold">Acciones</div>
+        <textarea class="area" id="ticket-reply" placeholder="Respuesta al cliente">${esc(store.ticketReply)}</textarea>
+        <div class="flex flex-col gap-2">${B("Responder", `data-act="reply"`, "primary")}${B("Reembolsar", `data-act="refund"`, "secondary")}${B("Escalar", `data-act="escalate"`, "danger")}</div>
+        <ul class="text-xs text-slate-500">${(store.ticketLog||[]).map(l => `<li>${esc(l)}</li>`).join("") || "<li>Sin acciones todavía.</li>"}</ul>
+      </div>
+    </div>`, "");
+  return appShell("UI-036", body);
+},
+"UI-037"(){
+  const zone = store.reportZone || "Todas";
+  const mult = zone === "Chapinero" ? 0.34 : zone === "Suba" ? 0.22 : 1;
+  const ent = Math.round(1280 * mult), ontime = Math.round(ent * 0.94), km = Math.round(6420 * mult);
+  const body = page("Últimos 30 días", "Reportes y analítica", `
+    <div class="flex flex-wrap gap-2 mb-3">
+      <select class="sel w-auto" id="rep-range"><option>Últimos 7 días</option><option selected>Últimos 30 días</option><option>Este mes</option></select>
+      <select class="sel w-auto" id="rep-zone"><option>Todas</option><option>Chapinero</option><option>Suba</option><option>Centro</option></select>
+      ${B("Aplicar filtros", `data-act="apply-report"`, "secondary")}
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4 text-sm">
+      ${[["Entregas",ent],["A tiempo",ontime],["Tiempo promedio","41 min"],["Km recorridos",km.toLocaleString("es-CO")],["Incidencias","2.4%"]].map(k => `<div class="card p-3"><div class="text-xs text-slate-500">${k[0]}</div><b class="text-xl">${k[1]}</b></div>`).join("")}
+    </div>
+    <div class="grid lg:grid-cols-2 gap-3">
+      <div class="card p-3"><div class="text-sm font-semibold mb-1">Entregas por día</div><svg viewBox="0 0 300 110" class="w-full h-28">${[40,55,48,62,58,70,66].map((v,i)=>`<rect x="${16+i*40}" y="${100-v}" width="24" height="${v}" rx="4" fill="#0f766e"/>`).join("")}</svg></div>
+      <div class="card p-3"><div class="text-sm font-semibold mb-2">Rendimiento por repartidor</div>
+        ${[["Carlos Méndez","98%","186"],["Diana Castro","96%","164"],["Laura Pinzón","93%","142"],["Andrés Ruiz","88%","121"]].map(r => `<div class="flex justify-between text-sm py-1 border-b border-slate-100"><span>${r[0]}</span><span>${r[1]} a tiempo · ${r[2]} entregas</span></div>`).join("")}
+      </div>
+    </div>
+    <div class="flex gap-2 mt-3">${B("Exportar Excel", `data-act="export" data-kind="xlsx"`, "primary", "fa-solid fa-file-excel")}${B("Exportar PDF", `data-act="export" data-kind="pdf"`, "secondary", "fa-solid fa-file-pdf")}</div>`, "");
+  return appShell("UI-037", body);
+},
+"UI-038"(){
+  const rows = store.users.map(u => `<article class="user-row"><div class="user-top"><b>${esc(u.name)}</b>${pill(u.status)}</div><div class="user-mail">${esc(u.email)}</div><div class="user-meta"><span>${esc(u.role)}</span><span>${esc(u.last)}</span></div><div class="user-perms">${u.perms.map(p => `<em>${esc(p)}</em>`).join("")}</div><div class="user-acts">${B("Editar permisos", `data-act="edit-perms" data-email="${esc(u.email)}"`, "secondary")}${B(u.status==="Activo"?"Desactivar":"Activar", `data-act="disable-user" data-email="${esc(u.email)}"`, "secondary")}</div></article>`).join("");
+  const editing = store.users.find(u => u.email === store.editEmail);
+  const catalog = ["Pedidos","Pagos","Seguimiento","Despacho","Flota","Reportes","Ruta","Entregas","Tickets","Usuarios","Reembolsos"];
+  const body = page("Administración", "Usuarios y permisos", `
+    ${store.creating ? `<div class="card p-4 mb-3 grid md:grid-cols-4 gap-2">${field("Nombre", `<input class="inp" id="nu-name" placeholder="Nombre">`)}${field("Correo", `<input class="inp" id="nu-email" placeholder="correo@empresa.com">`)}${field("Rol", `<select class="sel" id="nu-role"><option>Cliente / comercio</option><option>Despachador</option><option>Repartidor</option><option>Soporte / Admin</option></select>`)}<div class="flex items-end">${B("Guardar usuario", `data-act="save-user"`, "primary")}</div></div>` : ""}
+    <div class="card user-list">${rows}</div>
+    ${editing ? `<div class="card p-4 mt-3"><b>${esc(editing.name)}</b><div class="flex flex-wrap gap-2 mt-2">${catalog.map(p => `<button type="button" data-act="toggle-perm" data-perm="${esc(p)}" class="btn ${editing.perms.includes(p)?"btn-primary":"btn-secondary"}">${esc(p)}</button>`).join("")}</div></div>` : ""}
+  `, B("Crear usuario", `data-act="create-user"`, "primary", "fa-solid fa-user-plus"));
+  return appShell("UI-038", body);
+}
+};
+
+function modulesFor(){
+  const all = [
+    {go:"UI-006", title:"Historial de pedidos", desc:"Busca, filtra y abre el detalle", icon:"fa-box", roles:["cliente"]},
+    {go:"UI-007", title:"Crear pedido", desc:"Ubicación, paquetes y programación", icon:"fa-plus", roles:["cliente"]},
+    {go:"UI-010", title:"Importar pedidos", desc:"Carga masiva XLSX o CSV", icon:"fa-file-import", roles:["cliente","despachador"]},
+    {go:"UI-011", title:"Plantillas", desc:"Reutiliza pedidos frecuentes", icon:"fa-bookmark", roles:["cliente"]},
+    {go:"UI-029", title:"Seguimiento en vivo", desc:"Mapa, ETA y repartidor", icon:"fa-location-dot", roles:["cliente"]},
+    {go:"UI-032", title:"Notificaciones", desc:"Asignado, en camino, entregado", icon:"fa-bell", roles:["cliente"]},
+    {go:"UI-033", title:"Canales", desc:"Push, SMS y correo", icon:"fa-tower-broadcast", roles:["cliente"]},
+    {go:"UI-017", title:"Dashboard operativo", desc:"SLA, alertas y mapa general", icon:"fa-gauge-high", roles:["despachador"]},
+    {go:"UI-018", title:"Asignar pedido", desc:"A un repartidor o a un equipo", icon:"fa-clipboard-check", roles:["despachador"]},
+    {go:"UI-020", title:"Agrupación en lotes", desc:"Zona, capacidad y horario", icon:"fa-layer-group", roles:["despachador"]},
+    {go:"UI-021", title:"Prioridad y SLA", desc:"Secuencia arrastrable", icon:"fa-list-ol", roles:["despachador"]},
+    {go:"UI-022", title:"Flota de vehículos", desc:"Capacidad, estado y mantenimiento", icon:"fa-truck", roles:["despachador"]},
+    {go:"UI-037", title:"Reportes", desc:"Desempeño exportable", icon:"fa-chart-column", roles:["despachador","soporte"]},
+    {go:"UI-023", title:"Mi turno", desc:"Disponible, pausa o fuera", icon:"fa-clock", roles:["repartidor"]},
+    {go:"UI-024", title:"Mi ruta de hoy", desc:"Paradas ya optimizadas", icon:"fa-route", roles:["repartidor"]},
+    {go:"UI-035", title:"Reportar un problema", desc:"Chat o formulario", icon:"fa-life-ring", roles:["cliente","soporte"]},
+    {go:"UI-036", title:"Tickets", desc:"Historial, mapa y POD", icon:"fa-headset", roles:["soporte"]},
+    {go:"UI-038", title:"Usuarios y permisos", desc:"Roles y accesos", icon:"fa-users", roles:["soporte"]}
+  ];
+  if (state.role === "todos") return all;
+  return all.filter(m => m.roles.includes(state.role));
+}
+function quoteMath(){
+  const vehicle = document.getElementById("q-vehicle")?.value || store.quote.vehicle;
+  const weight = Number(document.getElementById("q-weight")?.value ?? store.quote.weight) || 1;
+  const origin = document.getElementById("q-origin")?.value || store.quote.origin;
+  const dest = document.getElementById("q-dest")?.value || store.quote.dest;
+  const base = {Moto:22000, Van:32000, "Camión":48000}[vehicle] || 22000;
+  const extra = Math.round(2400 + weight * 1000);
+  store.quote = {origin, dest, vehicle, weight, total: base + extra, base, extra};
+  return store.quote;
+}
+function ascii(s){ return String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\x20-\x7E]/g," "); }
+function downloadBlob(filename, content, mime){
+  const blob = content instanceof Blob ? content : new Blob([content], {type:mime});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+}
+function downloadPdf(filename, title, lines){
+  const pdfEsc = (s) => ascii(s).replace(/[()\\]/g, ch => "\\" + ch);
+  let y = 800;
+  const cmds = ["BT /F1 16 Tf 48 " + y + " Td (" + pdfEsc(title) + ") Tj ET"];
+  lines.forEach(line => { y -= 18; cmds.push("BT /F1 11 Tf 48 " + y + " Td (" + pdfEsc(line) + ") Tj ET"); });
+  const stream = cmds.join("\n");
+  const objs = [
+    "1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n",
+    "2 0 obj<< /Type /Pages /Count 1 /Kids [3 0 R] >>endobj\n",
+    "3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources<< /Font<< /F1 5 0 R >> >> >>endobj\n",
+    "4 0 obj<< /Length " + stream.length + " >>stream\n" + stream + "\nendstream endobj\n",
+    "5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n"
+  ];
+  let body = "%PDF-1.4\n";
+  const xref = [0];
+  objs.forEach(o => { xref.push(body.length); body += o; });
+  const start = body.length;
+  body += "xref\n0 " + xref.length + "\n0000000000 65535 f \n";
+  for (let i = 1; i < xref.length; i++) body += String(xref[i]).padStart(10,"0") + " 00000 n \n";
+  body += "trailer<< /Size " + xref.length + " /Root 1 0 R >>\nstartxref\n" + start + "\n%%EOF";
+  downloadBlob(filename, body, "application/pdf");
+}
+function fallbackCopy(text){
+  const t = document.createElement("textarea");
+  t.value = text;
+  document.body.appendChild(t);
+  t.select();
+  try { document.execCommand("copy"); } catch (err) {}
+  t.remove();
+  toast("Copiado");
+}
+function overlay(html){
+  closeOverlay();
+  const host = document.getElementById("device");
+  host.style.position = "relative";
+  const el = document.createElement("div");
+  el.id = "overlay";
+  el.className = "overlay";
+  el.innerHTML = `<div class="sheet">${html}</div>`;
+  host.appendChild(el);
+}
+function closeOverlay(){ document.getElementById("overlay")?.remove(); }
+function applyFilters(){
+  const root = document.getElementById("device");
+  if (!root) return;
+  const q = (root.querySelector("[data-q]")?.value || "").toLowerCase();
+  const st = root.querySelector("select[data-status]")?.value || "";
+  const date = root.querySelector("[data-date]")?.value || "";
+  const zone = root.querySelector("[data-zone]")?.value || "";
+  const fleet = root.querySelector("[data-fleet]")?.value || "";
+  let any = false;
+  root.querySelectorAll("[data-row]").forEach(row => {
+    const ok = (!q || (row.dataset.search || "").toLowerCase().includes(q)) && (!st || row.dataset.status === st) && (!date || row.dataset.date === date) && (!zone || row.dataset.zone === zone) && (!fleet || row.dataset.fleet === fleet || row.dataset.type === fleet);
+    row.classList.toggle("hidden", !ok);
+    if (ok) any = true;
+  });
+  const empty = root.querySelector("[data-empty]");
+  if (empty) empty.classList.toggle("hidden", any || !root.querySelector("[data-row]"));
+}
+function paintEvidence(){
+  ["firma","foto","codigo"].forEach(k => {
+    const el = document.querySelector(`[data-ev="${k}"]`);
+    if (el) el.textContent = store.evidence[k] ? "lista" : "pendiente";
+  });
+}
+let signUp = null;
+function bindSignature(){
+  const c = document.getElementById("signpad");
+  if (!c) return;
+  if (signUp) window.removeEventListener("pointerup", signUp);
+  const ctx = c.getContext("2d");
+  const ratio = window.devicePixelRatio || 1;
+  const rect = c.getBoundingClientRect();
+  c.width = Math.max(1, rect.width) * ratio;
+  c.height = Math.max(1, rect.height) * ratio;
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "#0f172a";
+  let drawing = false;
+  const pos = (e) => { const r = c.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; };
+  c.onpointerdown = (e) => { drawing = true; const p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); store._ink = true; c.setPointerCapture?.(e.pointerId); };
+  c.onpointermove = (e) => { if (!drawing) return; const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
+  signUp = () => { drawing = false; };
+  window.addEventListener("pointerup", signUp);
+}
+function bindDrag(){
+  const list = document.getElementById("sla-list");
+  if (!list) return;
+  let dragEl = null;
+  list.querySelectorAll("li").forEach(li => {
+    li.addEventListener("dragstart", () => { dragEl = li; li.classList.add("opacity-40"); });
+    li.addEventListener("dragend", () => {
+      li.classList.remove("opacity-40");
+      store.slaOrder = [...list.querySelectorAll("li")].map(x => x.dataset.id);
+      render();
+    });
+  });
+  list.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    const li = e.target.closest("li");
+    if (!li || !dragEl || li === dragEl) return;
+    const rect = li.getBoundingClientRect();
+    list.insertBefore(dragEl, e.clientY > rect.top + rect.height / 2 ? li.nextSibling : li);
+  });
+}
+const ACT = {
+  "toggle-pass"(el){
+    const input = document.getElementById(el.dataset.target);
+    if (!input) return;
+    input.type = input.type === "password" ? "text" : "password";
+    el.querySelector("i")?.classList.toggle("fa-eye");
+    el.querySelector("i")?.classList.toggle("fa-eye-slash");
+  },
+  help(){ overlay(`<h2 class="font-semibold mb-2">Ayuda para entrar</h2><ul class="text-sm space-y-2 text-slate-600"><li>Usa correo y contraseña, o entra con Google o Apple.</li><li>El ojo muestra u oculta la contraseña.</li><li>Si no recuerdas la clave, usa Forgot password?</li><li>Sign up crea la empresa.</li></ul><button type="button" class="btn btn-primary mt-3" data-act="close-overlay">Entendido</button>`); },
+  social(el){
+    const p = persona();
+    overlay(`<h2 class="font-semibold mb-1">Continuar con ${esc(el.dataset.provider)}</h2><p class="text-sm text-slate-500 mb-3">Elige la cuenta de ${esc(p.company)}.</p><button type="button" class="acct" data-go="UI-004"><span class="avatar">${initials(p.name)}</span><span class="acct-txt"><b>${esc(p.name)}</b><small>${esc(p.email)}</small></span></button><button type="button" class="btn btn-ghost mt-3" data-act="close-overlay">Cancelar</button>`);
+  },
+  "close-overlay"(){ closeOverlay(); },
+  login(){
+    const email = document.getElementById("login-email").value.trim();
+    const pass = document.getElementById("login-pass").value;
+    const err = document.getElementById("login-error");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || pass.length < 4 || pass.toLowerCase() === "incorrecta") {
+      err.textContent = pass.toLowerCase() === "incorrecta" ? "Credenciales incorrectas. Revisa correo y contraseña." : "Ingresa un correo válido y una contraseña de al menos 4 caracteres.";
+      err.classList.remove("hidden");
+      return false;
+    }
+    toast("Credenciales válidas");
+    go("UI-004");
+    return false;
+  },
+  "reset-send"(){ document.getElementById("reset-ok")?.classList.remove("hidden"); toast("Enlace de recuperación enviado"); },
+  register(){
+    const company = document.getElementById("reg-company").value.trim();
+    const email = document.getElementById("reg-email").value.trim();
+    const pass = document.getElementById("reg-pass").value;
+    const terms = document.getElementById("reg-terms").checked;
+    const err = document.getElementById("reg-error");
+    if (!company || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || pass.length < 4 || !terms) {
+      err.textContent = !terms ? "Acepta las condiciones de servicio." : "Revisa el nombre de empresa, el correo y la contraseña.";
+      err.classList.remove("hidden");
+      return false;
+    }
+    toast("Cuenta creada y verificada");
+    go("UI-004");
+    return false;
+  },
+  tab(el){
+    const name = el.dataset.tab;
+    if (name === "address" || name === "coord") store.locTab = name;
+    if (name === "firma" || name === "foto" || name === "codigo") store.podTab = name;
+    if (name === "chat" || name === "formulario") store.caseMode = name;
+    const scope = el.closest("[data-tabs]") || el.parentElement.parentElement;
+    scope.querySelectorAll("[data-tab]").forEach(b => b.classList.toggle("on", b.dataset.tab === name));
+    scope.querySelectorAll("[data-panel]").forEach(p => p.classList.toggle("hidden", p.dataset.panel !== name));
+    if (name === "firma") requestAnimationFrame(bindSignature);
+  },
+  find(){
+    store.coverage.address = document.getElementById("addr")?.value || store.coverage.address;
+    store.located = true;
+    toast("Ubicación encontrada en el mapa");
+    render();
+  },
+  "add-order"(){
+    if (!store.located) { toast("Busca la ubicación para habilitar Add"); return false; }
+    const id = "SE-48520";
+    if (!store.orders.some(o => o.id === id)) {
+      store.orders.unshift({id, dest:store.coverage.address, city:"Bogotá", amount:store.quote.total || 28600, status:"Pendiente", date:"2026-10-20", dateLabel:"20 oct 2026", window:"13:00 – 15:00", priority:"Normal", packages:2, weight:(store.quote.weight||4.2)+" kg", contact:"Marta Salazar", phone:"310 555 0142"});
+    }
+    store.selected = id;
+    toast("Pedido " + id + " agregado");
+    go("UI-006");
+    return false;
+  },
+  recalc(){
+    const q = quoteMath();
+    const base = document.getElementById("q-base");
+    if (base) {
+      base.textContent = money(q.base);
+      document.getElementById("q-extra").textContent = money(q.extra);
+      document.getElementById("q-total").textContent = money(q.total);
+      document.getElementById("q-km").textContent = (q.vehicle === "Camión" ? 14.8 : 6.4).toFixed(1) + " km";
+      document.getElementById("q-time").textContent = (q.vehicle === "Van" ? 55 : 42) + " min";
+    }
+    toast("Tarifa recalculada: " + money(q.total));
+  },
+  "apply-quote"(){ quoteMath(); store.quoteApplied = true; store.coverage.address = store.quote.dest; store.located = true; toast("Datos llevados al formulario de pedido"); go("UI-007"); return false; },
+  "cover-check"(){
+    const v = document.getElementById("cover-address").value.trim();
+    store.coverage.address = v || store.coverage.address;
+    store.coverage.ok = !/fuera|rural|zipa|melgar/i.test(store.coverage.address);
+    render();
+  },
+  nearby(){ store.coverage.address = "Cra 13 #22-40, Teusaquillo, Bogotá"; store.coverage.ok = true; toast("Sugerencia dentro de cobertura"); render(); },
+  "use-address"(){ if (!store.coverage.ok) return false; store.addressOk = true; store.located = true; toast("Dirección lista para el pedido"); go("UI-007"); return false; },
+  "download-template"(){
+    const csv = "\uFEFFdestino,contacto,telefono,paquetes,ventana,instrucciones\nCalle 14 #8-22,Marta Salazar,3105550142,2,13:00-15:00,Porteria apto 302\n";
+    downloadBlob("plantilla-pedidos.csv", csv, "text/csv;charset=utf-8");
+    toast("Plantilla descargada");
+  },
+  "load-sample"(){ store.preview = true; toast("Ejemplo cargado: 3 válidos y 1 con error"); render(); },
+  "import-go"(){
+    if (!store.preview) { toast("Primero carga un archivo"); return false; }
+    ["SE-48501","SE-48502","SE-48503"].forEach((id, i) => {
+      if (store.orders.some(o => o.id === id)) return;
+      const dest = ["Cll 100 #19-20, Usaquén","Cra 24 #63-10, Barrios Unidos","Cll 26 #92-30, Fontibón"][i];
+      store.orders.unshift({id, dest, city:"Bogotá", amount:19000+i*1500, status:"Pendiente", date:"2026-10-20", dateLabel:"20 oct 2026", window:"15:00 – 18:00", priority:"Normal", packages:1, weight:"1 kg", contact:"Importado", phone:"300 000 0000"});
+    });
+    store.imported = true;
+    toast("3 pedidos creados. 1 fila excluida por error.");
+    go("UI-006");
+    return false;
+  },
+  "pick-template"(el){ store.template = el.dataset.name; store.editingTemplate = false; render(); },
+  "edit-template"(){ store.editingTemplate = true; render(); },
+  "save-template"(){
+    const t = store.templates.find(x => x.name === store.template) || store.templates[0];
+    const name = document.getElementById("tpl-name").value.trim() || t.name;
+    t.name = name; t.origin = document.getElementById("tpl-origin").value; t.dest = document.getElementById("tpl-dest").value; t.contact = document.getElementById("tpl-contact").value; t.pack = document.getElementById("tpl-pack").value; t.notes = document.getElementById("tpl-notes").value;
+    store.template = name; store.editingTemplate = false; toast("Plantilla guardada"); render();
+  },
+  "use-template"(){ store.fromTemplate = true; const t = store.templates.find(x => x.name === store.template); if (t) { store.coverage.address = t.dest + ", Bogotá"; store.quote.dest = t.dest; store.quote.origin = t.origin; } },
+  "save-edit"(){
+    const o = order();
+    o.dest = document.getElementById("edit-addr").value;
+    o.window = document.getElementById("edit-win").value;
+    o.contact = document.getElementById("edit-name").value;
+    o.phone = document.getElementById("edit-phone").value;
+    toast("Cambios guardados y avisados al repartidor");
+    go("UI-012");
+    return false;
+  },
+  policy(){ overlay(`<h2 class="font-semibold mb-2">Política de cancelación</h2><p class="text-sm text-slate-600">Antes de la recolección el cargo es del 10%. Después de la recolección no se puede cancelar: hay que contactar a soporte. El reembolso vuelve al mismo medio de pago en 3 a 5 días.</p><button type="button" class="btn btn-primary mt-3" data-act="close-overlay">Cerrar</button>`); },
+  "do-cancel"(){
+    const reason = document.getElementById("cancel-reason").value;
+    if (!reason) { toast("Elige un motivo de cancelación"); return false; }
+    const o = order();
+    o.status = "Cancelado";
+    toast("Pedido cancelado. Reembolso en curso.");
+    go("UI-012");
+    return false;
+  },
+  reprogram(){
+    const o = order();
+    o.date = document.getElementById("re-date").value;
+    o.window = document.getElementById("re-slot").value;
+    o.dateLabel = "Reprogramado";
+    o.status = o.status === "Cancelado" ? o.status : "Pendiente";
+    toast("Entrega reprogramada. Avisamos a cliente, repartidor y operaciones.");
+    go("UI-012");
+    return false;
+  },
+  pay(){
+    const method = document.getElementById("pay-method").value;
+    if (method === "Transferencia") { document.getElementById("pay-fail").classList.remove("hidden"); toast("El banco rechazó la transferencia"); return; }
+    store.paid = true; store.txn = "TRX-908221"; toast("Pago aprobado"); render();
+  },
+  receipt(){
+    if (!store.paid) { toast("Paga el envío para descargar el comprobante"); return; }
+    const o = order();
+    downloadPdf("comprobante-" + o.id + ".pdf", "Comprobante Despacha", ["Pedido " + o.id, "Valor " + o.amount, "Transaccion " + store.txn, "Estado Pagado", "Medio " + (document.getElementById("pay-method")?.value || "Tarjeta")]);
+  },
+  "pick-order"(el){ store.assignOrder = el.dataset.id; render(); },
+  "pick-driver"(el){ store.assignDriver = el.dataset.name; store.reassignDriver = el.dataset.name; render(); },
+  "assign-type"(el){ store.assignType = el.dataset.kind; store.assignDriver = store.assignType === "equipo" ? TEAMS[0].name : DRIVERS[0].name; render(); },
+  "do-assign"(){
+    const o = store.orders.find(x => x.id === store.assignOrder);
+    if (o && o.status !== "Entregado") o.status = "Asignado";
+    toast(store.assignOrder + " asignado a " + store.assignDriver);
+    go("UI-017");
+    return false;
+  },
+  "do-reassign"(){
+    store.reassignReason = document.getElementById("re-why").value;
+    const o = store.orders.find(x => x.id === "SE-48301");
+    if (o) o.status = "Asignado";
+    toast("SE-48301 pasó a " + store.reassignDriver + ". El ETA del cliente se actualizó.");
+    go("UI-017");
+    return false;
+  },
+  criterion(el){ store.criteria[el.dataset.key] = !store.criteria[el.dataset.key]; render(); },
+  "adjust-batch"(){ store.moved = !store.moved; toast(store.moved ? "SE-48410 salió del lote por horario" : "SE-48410 volvió al lote B"); render(); },
+  "sla-toggle"(){ store.slaOn = !store.slaOn; render(); },
+  "apply-seq"(){ toast("Secuencia aplicada a la ruta del repartidor"); },
+  "edit-vehicle"(el){ store.editPlate = el.dataset.plate; render(); },
+  "save-vehicle"(){
+    const v = store.vehicles.find(x => x.plate === store.editPlate);
+    if (!v) return;
+    v.status = document.getElementById("veh-status").value;
+    v.driver = document.getElementById("veh-driver").value || "—";
+    toast(v.status === "Mantenimiento" ? v.plate + " en mantenimiento: no recibe rutas" : "Vehículo actualizado en despacho");
+    render();
+  },
+  shift(el){
+    const k = el.dataset.kind;
+    if (k === "start") {
+      if (store.shift === "fuera") { store.shift = "disponible"; store.shiftStart = Date.now(); toast("Turno iniciado"); }
+      go("UI-024");
+      return false;
+    }
+    if (k === "pause") {
+      if (store.shift === "fuera") { toast("Inicia el turno antes de pausar"); return; }
+      store.shift = store.shift === "pausa" ? "disponible" : "pausa";
+      toast(store.shift === "pausa" ? "En pausa no recibes asignaciones" : "Turno reactivado");
+      render();
+    }
+    if (k === "end") { store.shift = "fuera"; store.shiftStart = null; toast("Jornada cerrada"); render(); }
+  },
+  copy(el){
+    const text = el.dataset.text || "SE-48213";
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(() => toast("Copiado")).catch(() => fallbackCopy(text));
+    else fallbackCopy(text);
+  },
+  "open-map"(){ document.getElementById("stop-map")?.scrollIntoView({behavior:"smooth", block:"center"}); toast("Mapa centrado en la parada"); },
+  call(){ const s = stop(); overlay(`<h2 class="font-semibold">Llamando</h2><p class="text-sm mt-1">${esc(s.contact)} · ${esc(s.phone)}</p><button type="button" class="btn btn-secondary mt-3" data-act="close-overlay">Colgar</button>`); },
+  whatsapp(){ const s = stop(); overlay(`<h2 class="font-semibold">WhatsApp</h2><p class="text-sm text-slate-600 mt-1">Hola ${esc(s.contact)}, soy Carlos de Despacha. Voy en camino a ${esc(s.addr)}.</p><button type="button" class="btn btn-primary mt-3" data-act="close-overlay">Cerrar</button>`); },
+  chat(){ overlay(`<h2 class="font-semibold mb-2">Chat con Carlos</h2><div class="text-sm bg-slate-50 rounded-lg p-2 mb-2">Hola, voy a dos cuadras. ¿Puedes bajar?</div><input class="inp" placeholder="Escribe un mensaje"><button type="button" class="btn btn-primary mt-2" data-act="close-overlay">Enviar</button>`); },
+  "read-ins"(el){ const i = Number(el.dataset.i); store.instructions[i].ok = !store.instructions[i].ok; el.classList.toggle("line-through", store.instructions[i].ok); el.classList.toggle("text-slate-400", store.instructions[i].ok); const icon = el.querySelector("i"); if (icon) icon.className = store.instructions[i].ok ? "fa-regular fa-square-check mr-2" : "fa-regular fa-square mr-2"; },
+  deviate(el){
+    const mode = el.dataset.mode;
+    toast(mode === "back" ? "Volviendo al punto más cercano de la ruta" : mode === "recalc" ? "Ruta recalculada hacia la parada 3" : "Desvío autorizado. No volveremos a alertar en este tramo.");
+    go(mode === "ok" ? "UI-025" : "UI-024");
+    return false;
+  },
+  "clear-sign"(){ const c = document.getElementById("signpad"); if (!c) return; c.getContext("2d").clearRect(0,0,c.width,c.height); store._ink = false; store.evidence.firma = false; toast("Firma borrada"); },
+  "save-sign"(){
+    const name = document.getElementById("recv-name")?.value.trim();
+    if (!store._ink) { toast("Firma dentro del recuadro"); return; }
+    if (!name) { toast("Escribe el nombre de quien recibe"); return; }
+    store.receiver = name; store.evidence.firma = true; toast("Firma guardada"); render();
+  },
+  "take-photo"(){ store.evidence.foto = true; toast("Foto guardada como evidencia"); render(); },
+  "retake-photo"(){ store.evidence.foto = false; toast("Puedes tomar la foto de nuevo"); render(); },
+  "sample-photo"(){ overlay(`<h2 class="font-semibold mb-2">Foto de ejemplo</h2><div class="h-36 rounded-xl bg-gradient-to-br from-amber-100 to-slate-300 grid place-items-center text-sm">Puerta del apartamento, paquete visible, sin recortar el número</div><button type="button" class="btn btn-primary mt-3" data-act="close-overlay">Cerrar</button>`); },
+  key(el){
+    if (store.codeLocked) return;
+    store.podTab = "codigo";
+    const d = String(el.dataset.digit);
+    if (d === "del") store.code = store.code.slice(0, -1);
+    else if (store.code.length < 4) store.code += d;
+    if (store.code.length === 4) {
+      if (store.code === "4829") { store.evidence.codigo = true; toast("Código correcto"); }
+      else {
+        store.codeAttempts += 1; store.code = "";
+        if (store.codeAttempts >= 3) { store.codeLocked = true; toast("Sin intentos. Usa firma o foto."); }
+        else toast("Código incorrecto, intenta de nuevo (" + store.codeAttempts + "/3)");
+      }
+    }
+    render();
+  },
+  "confirm-delivery"(){
+    const ev = store.evidence;
+    if (!ev.firma && !ev.foto && !ev.codigo) { toast("Agrega firma, foto o código"); return false; }
+    if (!store.deliveredStops.includes(store.stop)) store.deliveredStops.push(store.stop);
+    const s = store.stops.find(x => x.n === store.stop);
+    if (s) s.status = "entregada";
+    if (store.stop === 1) {
+      const o = store.orders.find(x => x.id === "SE-48213");
+      if (o) o.status = "Entregado";
+      store.evidenceSaved = true;
+    }
+    const nxt = store.stops.find(x => !store.deliveredStops.includes(x.n));
+    if (nxt) store.stop = nxt.n;
+    toast(nxt ? "Entrega confirmada. Siguiente: " + nxt.addr : "Ruta completada");
+    go("UI-024");
+    return false;
+  },
+  "add-photo"(){ store.photos = Math.min(3, (store.photos || 0) + 1); toast("Foto adjunta"); render(); },
+  "call-try"(){ store.callTries = (store.callTries || 1) + 1; toast("Intento de llamada registrado"); render(); },
+  "send-incident"(){
+    const note = document.getElementById("inc-note")?.value.trim();
+    if ((store.photos || 0) < 1) { toast("Agrega al menos una foto"); return false; }
+    toast("Incidencia enviada a operaciones" + (note ? ": " + note.slice(0, 48) : "") + ". Puedes seguir la ruta.");
+    go("UI-024");
+    return false;
+  },
+  "verify-phone"(){
+    const v = (document.getElementById("phone4")?.value || "").trim();
+    if (v === "0142") { store.linkUnlocked = true; toast("Dirección completa visible"); render(); }
+    else toast("Esos 4 dígitos no coinciden");
+  },
+  "new-link"(){ toast("Te enviamos un enlace nuevo por SMS"); },
+  "get-app"(){ toast("Enlace de descarga enviado"); },
+  threshold(el){ store.threshold = Number(el.dataset.min); render(); },
+  "save-threshold"(){ toast("Te avisaremos si el ETA cambia " + store.threshold + " min o más"); },
+  "expand-notif"(){ store.notifOpen = !store.notifOpen; render(); },
+  rate(){ overlay(`<h2 class="font-semibold mb-2">Calificar entrega</h2><div class="text-amber-500 text-2xl mb-2">★★★★★</div><button type="button" class="btn btn-primary" data-go="UI-034">Enviar y ver comprobante</button>`); },
+  switch(el){
+    const key = el.dataset.key;
+    const next = !store.channels[key];
+    const alive = ["push","sms","mail"].filter(k => k !== key && store.channels[k]).length;
+    if (!next && alive === 0) { toast("Debe quedar al menos un canal activo"); return; }
+    store.channels[key] = next;
+    render();
+  },
+  matrix(el){
+    const ch = el.dataset.ch, ev = el.dataset.ev;
+    if (!store.channels[ch]) { toast("Ese canal está apagado"); return; }
+    store.matrix[ev][ch] = !store.matrix[ev][ch];
+    render();
+  },
+  "save-channels"(){ toast("Preferencias guardadas para las próximas notificaciones"); },
+  "received-ok"(){ store.received = true; toast("Conformidad registrada. Pedido cerrado."); },
+  "pod-pdf"(){ downloadPdf("pod-SE-48213.pdf", "Prueba de entrega SE-48213", ["Recibio Marta Salazar a las 14:07", "Direccion Calle 14 #8-22 Apto 302", "Guias 7781 y 7782", "Firma y foto adjuntas", "GPS a 12 m de la direccion"]); },
+  "chat-send"(){
+    const input = document.getElementById("chat-text");
+    const text = input?.value.trim();
+    if (!text) return;
+    const log = document.getElementById("chat-log");
+    if (log) log.insertAdjacentHTML("beforeend", `<div class="text-sm bg-teal-50 rounded-lg p-2">${esc(text)}</div>`);
+    if (input) input.value = "";
+  },
+  "send-case"(){
+    const cat = document.getElementById("case-cat")?.value;
+    const msg = document.getElementById("case-msg")?.value.trim();
+    if (!cat || !msg) { toast("Elige una categoría y escribe el mensaje"); return false; }
+    store.caseId = "CAS-20418";
+    store.ticketLog = store.ticketLog || [];
+    store.ticketLog.push("Caso creado: " + cat);
+    toast("Caso CAS-20418 creado");
+    go("UI-036");
+    return false;
+  },
+  "pick-solution"(){ overlay(`<h2 class="font-semibold mb-2">Elige una solución</h2><div class="flex gap-2"><button type="button" class="btn btn-primary" data-act="solution" data-sol="Reembolso">Reembolso</button><button type="button" class="btn btn-secondary" data-act="solution" data-sol="Reenvío">Reenvío</button></div>`); },
+  solution(el){ store.solution = el.dataset.sol; closeOverlay(); toast("Solución marcada: " + store.solution); render(); },
+  reply(){
+    const text = document.getElementById("ticket-reply")?.value.trim();
+    if (!text) { toast("Escribe la respuesta"); return; }
+    store.ticketReply = "";
+    store.ticketLog = store.ticketLog || [];
+    store.ticketLog.push("Respuesta: " + text);
+    store.ticketStatus = "En revisión";
+    toast("Respuesta registrada en el ticket");
+    render();
+  },
+  refund(){ store.ticketStatus = "Resuelto"; store.ticketLog = store.ticketLog || []; store.ticketLog.push("Reembolso de $28.600 autorizado"); toast("Reembolso registrado"); render(); },
+  escalate(){ store.ticketStatus = "Escalado"; store.ticketLog = store.ticketLog || []; store.ticketLog.push("Escalado a operaciones"); toast("Ticket escalado"); render(); },
+  "apply-report"(){ store.reportZone = document.getElementById("rep-zone").value; toast("Reporte actualizado"); render(); },
+  export(el){
+    const zone = store.reportZone || "Todas";
+    if (el.dataset.kind === "pdf") downloadPdf("reporte-desempeno.pdf", "Reporte de desempeno", ["Zona " + zone, "Entregas del periodo", "Incluye SLA, km e incidencias"]);
+    else downloadBlob("reporte-desempeno.csv", "\uFEFFrepartidor,entregas,a_tiempo\nCarlos Mendez,186,98%\nDiana Castro,164,96%\nLaura Pinzon,142,93%\nAndres Ruiz,121,88%\n", "text/csv;charset=utf-8");
+    toast(el.dataset.kind === "pdf" ? "PDF generado" : "Excel generado");
+  },
+  "create-user"(){ store.creating = !store.creating; render(); },
+  "save-user"(){
+    const name = document.getElementById("nu-name").value.trim();
+    const email = document.getElementById("nu-email").value.trim();
+    const role = document.getElementById("nu-role").value;
+    if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast("Nombre y correo válidos"); return; }
+    store.users.push({name, email, role, status:"Activo", last:"Nunca", perms:["Pedidos"]});
+    store.creating = false;
+    toast("Usuario creado. Los permisos aplican en el próximo acceso.");
+    render();
+  },
+  "edit-perms"(el){ store.editEmail = store.editEmail === el.dataset.email ? null : el.dataset.email; render(); },
+  "toggle-perm"(el){
+    const u = store.users.find(x => x.email === store.editEmail);
+    if (!u) return;
+    const p = el.dataset.perm;
+    u.perms = u.perms.includes(p) ? u.perms.filter(x => x !== p) : u.perms.concat(p);
+    render();
+  },
+  "disable-user"(el){
+    const u = store.users.find(x => x.email === el.dataset.email);
+    if (!u) return;
+    u.status = u.status === "Activo" ? "Inactivo" : "Activo";
+    toast(u.status === "Inactivo" ? "Cuenta desactivada. El historial se conserva." : "Cuenta activada");
+    render();
+  }
+};
+function onClick(e){
+  if (e.target.closest("[data-act='menu']")) {
+    document.getElementById("user-menu")?.classList.toggle("hidden");
+    return;
+  }
+  if (!e.target.closest("#user-menu")) document.getElementById("user-menu")?.classList.add("hidden");
+  const actEl = e.target.closest("[data-act]");
+  const goEl = e.target.closest("[data-go]");
+  if (actEl && actEl.tagName !== "SELECT" && actEl.dataset.act !== "menu") {
+    const res = ACT[actEl.dataset.act]?.(actEl, e);
+    if (res === false) return;
+    if (!goEl || goEl !== actEl) { if (!goEl) return; }
+  }
+  if (goEl) {
+    if (goEl.dataset.order) store.selected = goEl.dataset.order;
+    if (goEl.dataset.stop) store.stop = Number(goEl.dataset.stop);
+    go(goEl.dataset.go);
+  }
+}
+function onField(e){
+  const t = e.target;
+  if (t.id === "file-import") {
+    store.preview = true;
+    const name = t.files && t.files[0] ? t.files[0].name : "archivo";
+    toast(/\.xlsx?$/i.test(name) ? "Archivo recibido. Vista previa de validación lista." : "CSV leído. Vista previa lista.");
+    render();
+    return;
+  }
+  if (t.id === "reset-email") {
+    const btn = document.getElementById("reset-btn");
+    if (btn) btn.disabled = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t.value.trim());
+  }
+  if (t.id === "edit-addr") document.getElementById("edit-cost")?.classList.toggle("hidden", !/suba|usaquen|chic/i.test(t.value));
+  if (t.id === "recv-name") store.receiver = t.value;
+  if (t.matches("[data-q], select[data-status], [data-date], [data-zone], [data-fleet]")) applyFilters();
+}
+function renderRoles(){
+  document.getElementById("roles").innerHTML = ROLE_META.map(([id, label, icon, sub], i) => {
+    const count = id === "todos" ? 38 : Object.keys(META).filter(s => META[s][2].includes(id)).length;
+    return `<button type="button" data-role="${id}" class="role-btn ${i===0?"span":""} ${state.role===id?"on":""}"><i class="fa-solid ${icon}"></i><span>${label}<small>${count} pantallas · ${sub}</small></span></button>`;
+  }).join("");
+}
+function renderList(){
+  document.getElementById("screen-list").innerHTML = PROCESSES.map(p => `<div class="proc"><b>${p.id} · ${p.name}</b><span>${p.range} · ${p.req}</span></div>` + p.screens.map(id => {
+    const m = meta(id);
+    const dots = (state.role === "todos" ? m.roles : (inRole(id) ? [state.role] : [])).map(r => `<i class="rdot c-${r}" title="${r}"></i>`).join("");
+    return `<button type="button" class="screen-btn ${state.screen===id?"active":""} ${inRole(id)?"":"dim"}" data-pick="${id}" title="${inRole(id) ? "Pertenece al rol" : "Fuera del rol seleccionado"}"><span class="tag-ui">${id}</span><span class="nm">${esc(m.title)}</span><span style="display:flex;gap:3px">${dots}</span></button>`;
+  }).join("")).join("");
+}
+function renderTop(){
+  const m = meta(state.screen);
+  const pr = procOf(m.process);
+  document.getElementById("tb-id").textContent = m.id;
+  document.getElementById("tb-title").textContent = m.title;
+  document.getElementById("tb-sub").textContent = pr.name + " · " + m.req;
+  document.getElementById("hint").textContent = HINTS[state.screen] || "Los botones del lienzo y estas conexiones saltan de pantalla.";
+  document.getElementById("tb-device").textContent = isPhone(state.screen) ? "Smartphone" : "Escritorio";
+  const flows = FLOWS[state.screen] || [];
+  document.getElementById("flows").innerHTML = flows.length ? flows.map(([label, to]) => `<button type="button" class="flow-chip" data-go="${to}">${esc(label)} <em>→ ${to}</em></button>`).join("") : `<span class="text-xs text-slate-400 px-1">Esta pantalla resuelve la acción sin cambiar de vista.</span>`;
+  document.getElementById("btn-back").disabled = nav.past.length === 0;
+  document.getElementById("btn-fwd").disabled = nav.future.length === 0;
+}
+function fitPhone(){
+  const canvas = document.getElementById("canvas");
+  const device = document.getElementById("device");
+  const slot = device.querySelector(".ph-scale");
+  canvas.classList.toggle("fit-phone", !!slot);
+  if (!slot) { device.style.width = ""; device.style.height = ""; return; }
+  const cs = getComputedStyle(canvas);
+  const availW = canvas.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 12;
+  const availH = canvas.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 12;
+  const scale = Math.max(0.42, Math.min(1, availW / 402, availH / 852));
+  device.style.zoom = "";
+  device.style.width = Math.round(402 * scale) + "px";
+  device.style.height = Math.round(852 * scale) + "px";
+  slot.style.transform = "scale(" + scale + ")";
+}
+function render(){
+  renderRoles();
+  renderList();
+  renderTop();
+  const id = state.screen;
+  const phone = isPhone(id);
+  const device = document.getElementById("device");
+  device.className = phone ? "device phone" : "device desktop";
+  device.style.position = "relative";
+  device.style.zoom = "";
+  device.style.width = "";
+  device.style.height = "";
+  const html = withStatus(renderers[id] ? renderers[id]() : `<div class="p-6">Pantalla no definida</div>`);
+  const bar = phone ? "" : `<div class="deskbar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><em>${id==="UI-030"?"sigue.despacha.co/t/SE-48213":"despacha.app / "+meta(id).title}</em></div>`;
+  device.innerHTML = phone
+    ? `<div class="ph-scale"><div class="ph-shell"><span class="ph-btn silent"></span><span class="ph-btn up"></span><span class="ph-btn down"></span><span class="ph-btn power"></span><i class="ph-island"></i><i class="ph-home"></i><div class="device-body">${html}</div></div></div>`
+    : bar + `<div class="device-body">${html}</div>`;
+  requestAnimationFrame(fitPhone);
+  if (id === "UI-027" && (store.podTab || "firma") === "firma") requestAnimationFrame(bindSignature);
+  if (id === "UI-021") bindDrag();
+  document.querySelector(".screen-btn.active")?.scrollIntoView({block:"nearest"});
+  if (mapState.open) paintMapNodes();
+}
+function tickShift(){
+  if (store.shift === "fuera" || !store.shiftStart) return;
+  const label = fmtDur(Date.now() - store.shiftStart);
+  const a = document.getElementById("shift-elapsed");
+  const b = document.getElementById("shift-clock");
+  if (a) a.textContent = "En turno · " + label;
+  if (b) b.textContent = label;
+}
+const PROC_COLOR = { A:"#f59e0b", B:"#38bdf8", C:"#a78bfa", D:"#34d399", E:"#fb7185", F:"#22d3ee", G:"#c084fc" };
+const HOME_LINKS = ["UI-006","UI-007","UI-010","UI-011","UI-029","UI-032","UI-033","UI-017","UI-018","UI-020","UI-021","UI-022","UI-037","UI-023","UI-024","UI-035","UI-036","UI-038"];
+const mapState = { open:false, scale:0.7, x:40, y:30, selected:null, edge:null, labels:false, query:"", drag:null };
+function connectionEdges(){
+  const edges = [];
+  Object.entries(FLOWS).forEach(([from, list]) => list.forEach(([label, to]) => edges.push({ from, to, label, kind:"flow" })));
+  HOME_LINKS.forEach(to => {
+    if (!edges.some(e => e.from === "UI-004" && e.to === to)) edges.push({ from:"UI-004", to, label:"Ir a un módulo", kind:"home" });
+  });
+  return edges;
+}
+const MAP_EDGES = connectionEdges();
+function linkedIds(id){
+  const set = new Set();
+  MAP_EDGES.forEach(e => {
+    if (e.from === id) set.add(e.to);
+    if (e.to === id) set.add(e.from);
+  });
+  return set;
+}
+function applyMapTransform(){
+  const world = document.getElementById("fm-world");
+  if (world) world.style.transform = "translate(" + mapState.x + "px," + mapState.y + "px) scale(" + mapState.scale + ")";
+}
+function buildFlowMap(){
+  const cols = document.getElementById("fm-cols");
+  cols.innerHTML = PROCESSES.map(p => {
+    const nodes = p.screens.map(id => {
+      const m = meta(id);
+      return `<button type="button" class="fm-node" data-id="${id}"><span class="tag-ui">${id}</span><span class="fm-name">${esc(m.title)}</span><span class="fm-meta">${isPhone(id) ? "Smartphone" : "Escritorio"} · ${esc(m.req)}</span></button>`;
+    }).join("");
+    return `<section class="fm-col" style="border-top:3px solid ${PROC_COLOR[p.id]}"><header><b style="color:${PROC_COLOR[p.id]}">${p.id} · ${esc(p.name)}</b><span>${esc(p.range)}</span></header>${nodes}</section>`;
+  }).join("");
+  document.getElementById("fm-count").textContent = MAP_EDGES.length + " conexiones · clic para ver el recorrido · doble clic para abrir la pantalla";
+  paintMapNodes();
+}
+function worldBox(el){
+  const world = document.getElementById("fm-world");
+  const a = el.getBoundingClientRect();
+  const b = world.getBoundingClientRect();
+  const s = mapState.scale || 1;
+  return { left:(a.left - b.left) / s, top:(a.top - b.top) / s, w:a.width / s, h:a.height / s };
+}
+function drawEdges(){
+  const svg = document.getElementById("fm-svg");
+  const world = document.getElementById("fm-world");
+  const cols = document.getElementById("fm-cols");
+  if (!svg || !cols) return;
+  const w = cols.offsetWidth;
+  const h = cols.offsetHeight;
+  world.style.width = w + "px";
+  world.style.height = h + "px";
+  svg.setAttribute("width", w);
+  svg.setAttribute("height", h);
+  svg.setAttribute("viewBox", "0 0 " + w + " " + h);
+  const boxes = {};
+  document.querySelectorAll(".fm-node").forEach(n => { boxes[n.dataset.id] = worldBox(n); });
+  const selected = mapState.selected;
+  const grouped = new Map();
+  MAP_EDGES.forEach(e => {
+    const key = e.from + ">" + e.to;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(e);
+  });
+  const outSeen = {};
+  let paths = `<defs><marker id="fm-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="context-stroke"/></marker></defs>`;
+  grouped.forEach((list, key) => {
+    const from = list[0].from;
+    const to = list[0].to;
+    const a = boxes[from];
+    const b = boxes[to];
+    if (!a || !b) return;
+    const nOut = MAP_EDGES.filter(e => e.from === from).length;
+    const i = outSeen[from] || 0;
+    outSeen[from] = i + 1;
+    const spread = (i - (nOut - 1) / 2) * 12;
+    const y1 = a.top + a.h / 2 + spread;
+    const y2 = b.top + b.h / 2;
+    const same = Math.abs(a.left - b.left) < 8;
+    const forward = b.left >= a.left;
+    const x1 = same || forward ? a.left + a.w : a.left;
+    const x2 = same || forward ? b.left : b.left + b.w;
+    let d;
+    let mx;
+    let my;
+    if (same) {
+      const bow = 56 + Math.abs(y2 - y1) * 0.15;
+      d = "M " + x1 + " " + y1 + " C " + (x1 + bow) + " " + y1 + ", " + (x1 + bow) + " " + y2 + ", " + (b.left + b.w) + " " + y2;
+      mx = x1 + bow;
+      my = (y1 + y2) / 2;
+    } else {
+      const dx = Math.max(50, Math.abs(x2 - x1) * 0.45);
+      const c1x = x1 + (x2 >= x1 ? dx : -dx);
+      const c2x = x2 - (x2 >= x1 ? dx : -dx);
+      d = "M " + x1 + " " + y1 + " C " + c1x + " " + y1 + ", " + c2x + " " + y2 + ", " + x2 + " " + y2;
+      mx = (x1 + c1x + c2x + x2) / 4;
+      my = (y1 + y1 + y2 + y2) / 4;
+    }
+    const label = list.map(e => e.label).join(" · ");
+    const focused = !!(mapState.edge && mapState.edge.from === from && mapState.edge.to === to);
+    const hot = !mapState.edge && selected && (selected === from || selected === to);
+    const quiet = mapState.edge ? !focused : (selected && !hot);
+    const home = list.every(e => e.kind === "home");
+    const color = focused ? "#f5c542" : (PROC_COLOR[meta(from).process] || "#94a3b8");
+    const faded = (!inRole(from) && !inRole(to)) || quiet;
+    paths += `<path data-from="${from}" data-to="${to}" data-label="${esc(label)}" d="${d}" fill="none" stroke="${color}" stroke-width="${focused ? 4.2 : hot ? 2.6 : 1.4}" ${home ? 'stroke-dasharray="5 4"' : ""} marker-end="url(#fm-arrow)" opacity="${focused ? 1 : faded ? 0.1 : 0.9}"/>`;
+    if ((focused || hot || mapState.labels) && (focused || !faded)) {
+      const shown = focused && mapState.edge.label ? mapState.edge.label : label;
+      paths += `<text x="${mx}" y="${my}" fill="${focused ? "#f5c542" : "#e2e8f0"}" font-size="${focused ? 13 : 10}" font-weight="700" font-family="Plus Jakarta Sans, sans-serif" text-anchor="middle" stroke="#101114" stroke-width="4" paint-order="stroke">${esc(shown)}</text>`;
+    }
+  });
+  svg.innerHTML = paths;
+}
+function fillMapDetail(){
+  const box = document.getElementById("fm-detail");
+  const id = mapState.selected;
+  if (!id) {
+    box.innerHTML = `<h3 style="margin:0 0 8px">Relaciones</h3><p style="font-size:13px;color:#a1a1aa">Toca una tarjeta para ver de dónde llega y a dónde sale. Después toca una relación para dejar encendida solo esa línea.</p>`;
+    return;
+  }
+  const m = meta(id);
+  const outs = MAP_EDGES.filter(e => e.from === id);
+  const ins = MAP_EDGES.filter(e => e.to === id);
+  const on = (e) => mapState.edge && mapState.edge.from === e.from && mapState.edge.to === e.to && (mapState.edge.label === e.label || String(mapState.edge.label).split(" · ").includes(e.label));
+  const row = (e) => `<button type="button" class="fm-link ${e.kind === "home" ? "home" : ""} ${on(e) ? "on" : ""}" data-edge-from="${e.from}" data-edge-to="${e.to}" data-edge-label="${esc(e.label)}"><small>${esc(e.label)} · ${e.from} → ${e.to}</small>${esc(meta(e.from).title)} → ${esc(meta(e.to).title)}</button>`;
+  const focusNote = mapState.edge ? `<p style="font-size:12px;color:#f5c542;margin:0 0 10px">Línea enfocada: ${esc(mapState.edge.label)}. Toca otra vez para ver todas.</p>` : `<p style="font-size:12px;color:#a1a1aa;margin:0 0 10px">Toca una relación para enfocar solo esa línea.</p>`;
+  box.innerHTML = `<span class="tag-ui">${id}</span><h3 style="margin:8px 0 4px">${esc(m.title)}</h3><p style="font-size:12px;color:#a1a1aa;margin:0 0 8px">${esc(procOf(m.process).name)} · ${isPhone(id) ? "Smartphone" : "Escritorio"}</p>${focusNote}<button type="button" class="fm-tool" id="fm-open" style="width:100%;margin-bottom:14px">Abrir esta pantalla</button><div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#a1a1aa;margin-bottom:6px">Sale hacia</div>${outs.map(row).join("") || "<p style='font-size:12px;color:#71717a'>Sin salidas</p>"}<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#a1a1aa;margin:12px 0 6px">Llega desde</div>${ins.map(row).join("") || "<p style='font-size:12px;color:#71717a'>Sin entradas</p>"}`;
+  box.querySelector(".fm-link.on")?.scrollIntoView({ block:"nearest" });
+}
+function paintMapNodes(){
+  const q = mapState.query.trim().toLowerCase();
+  const edge = mapState.edge;
+  const near = mapState.selected ? linkedIds(mapState.selected) : null;
+  document.querySelectorAll(".fm-node").forEach(n => {
+    const id = n.dataset.id;
+    const m = meta(id);
+    const match = !q || id.toLowerCase().includes(q) || m.title.toLowerCase().includes(q);
+    const onEdge = !!(edge && (id === edge.from || id === edge.to));
+    n.classList.toggle("fm-miss", !!q && !match);
+    n.classList.toggle("fm-dim", !q && !edge && !inRole(id));
+    n.classList.toggle("fm-on", edge ? onEdge : mapState.selected === id);
+    n.classList.toggle("fm-hot", edge ? false : !!(near && near.has(id)));
+    n.classList.toggle("fm-quiet", edge ? !onEdge : !!(near && mapState.selected !== id && !near.has(id)));
+  });
+  drawEdges();
+  fillMapDetail();
+}
+function fitMap(){
+  const view = document.getElementById("fm-view");
+  const cols = document.getElementById("fm-cols");
+  const ww = cols.offsetWidth || 1;
+  const wh = cols.offsetHeight || 1;
+  const s = Math.max(0.28, Math.min(1, (view.clientWidth - 48) / ww, (view.clientHeight - 48) / wh));
+  mapState.scale = s;
+  mapState.x = Math.max(16, (view.clientWidth - ww * s) / 2);
+  mapState.y = Math.max(16, (view.clientHeight - wh * s) / 2);
+  applyMapTransform();
+}
+function focusEdge(edge){
+  const view = document.getElementById("fm-view");
+  const a = document.querySelector('.fm-node[data-id="' + edge.from + '"]');
+  const b = document.querySelector('.fm-node[data-id="' + edge.to + '"]');
+  if (!view || !a || !b) return;
+  const ba = worldBox(a);
+  const bb = worldBox(b);
+  const minX = Math.min(ba.left, bb.left) - 80;
+  const minY = Math.min(ba.top, bb.top) - 70;
+  const maxX = Math.max(ba.left + ba.w, bb.left + bb.w) + 80;
+  const maxY = Math.max(ba.top + ba.h, bb.top + bb.h) + 70;
+  const s = Math.max(0.55, Math.min(1.25, (view.clientWidth - 36) / Math.max(80, maxX - minX), (view.clientHeight - 36) / Math.max(80, maxY - minY)));
+  mapState.scale = s;
+  mapState.x = (view.clientWidth - (minX + maxX) * s) / 2;
+  mapState.y = (view.clientHeight - (minY + maxY) * s) / 2;
+  applyMapTransform();
+}
+function openFlowMap(){
+  mapState.open = true;
+  mapState.selected = state.screen;
+  mapState.edge = null;
+  const layer = document.getElementById("flow-map");
+  layer.classList.add("open");
+  layer.setAttribute("aria-hidden", "false");
+  buildFlowMap();
+  requestAnimationFrame(() => { fitMap(); paintMapNodes(); });
+}
+function closeFlowMap(){
+  mapState.open = false;
+  const layer = document.getElementById("flow-map");
+  layer.classList.remove("open");
+  layer.setAttribute("aria-hidden", "true");
+}
+function zoomMap(factor){
+  const view = document.getElementById("fm-view");
+  const mx = view.clientWidth / 2;
+  const my = view.clientHeight / 2;
+  const next = Math.min(1.7, Math.max(0.28, mapState.scale * factor));
+  const k = next / mapState.scale;
+  mapState.x = mx - (mx - mapState.x) * k;
+  mapState.y = my - (my - mapState.y) * k;
+  mapState.scale = next;
+  applyMapTransform();
+}
+const smState = { open:false, scale:0.45, x:24, y:24, drag:null };
+function thumbHtml(id){
+  try {
+    return withStatus(renderers[id]().replace(/\sid="[^"]*"/g, "").replace(/\sfor="[^"]*"/g, "").replace(/\sname="([^"]*)"/g, ' name="sm-$1"'));
+  } catch (err) {
+    return `<div class="p-6 text-sm">No se pudo dibujar ${id}</div>`;
+  }
+}
+function buildScreenMap(){
+  const cols = document.getElementById("sm-cols");
+  if (cols.dataset.ready === "1") return;
+  cols.innerHTML = PROCESSES.map(p => {
+    const nodes = p.screens.map(id => {
+      const phone = isPhone(id);
+      return `<div class="sm-node ${phone ? "phone" : "desk"}" data-id="${id}"><div class="sm-cap"><em>${id}</em>${esc(meta(id).title)}</div><div class="sm-shot ${phone ? "phone" : "desk"}"><div class="sm-live" inert aria-hidden="true">${thumbHtml(id)}</div></div></div>`;
+    }).join("");
+    return `<section class="sm-col"><header><b style="color:${PROC_COLOR[p.id]}">${p.id} · ${esc(p.name)}</b><span>${esc(p.range)}</span></header>${nodes}</section>`;
+  }).join("");
+  cols.dataset.ready = "1";
+}
+function smApply(){
+  const world = document.getElementById("sm-world");
+  if (world) world.style.transform = "translate(" + smState.x + "px," + smState.y + "px) scale(" + smState.scale + ")";
+}
+function smBox(el){
+  const world = document.getElementById("sm-world");
+  const a = el.getBoundingClientRect();
+  const b = world.getBoundingClientRect();
+  const s = smState.scale || 1;
+  return { left:(a.left - b.left) / s, top:(a.top - b.top) / s, w:a.width / s, h:a.height / s };
+}
+function drawScreenLinks(){
+  const svg = document.getElementById("sm-svg");
+  const world = document.getElementById("sm-world");
+  const cols = document.getElementById("sm-cols");
+  if (!svg || !cols) return;
+  const w = cols.offsetWidth;
+  const h = cols.offsetHeight;
+  world.style.width = w + "px";
+  world.style.height = h + "px";
+  svg.setAttribute("width", w);
+  svg.setAttribute("height", h);
+  svg.setAttribute("viewBox", "0 0 " + w + " " + h);
+  const boxes = {};
+  document.querySelectorAll(".sm-shot").forEach(n => { boxes[n.closest(".sm-node").dataset.id] = smBox(n); });
+  const grouped = new Map();
+  MAP_EDGES.forEach(e => {
+    const key = e.from + ">" + e.to;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(e);
+  });
+  const seen = {};
+  let paths = `<defs><marker id="sm-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#38bdf8"/></marker></defs>`;
+  grouped.forEach(list => {
+    const from = list[0].from;
+    const to = list[0].to;
+    const a = boxes[from];
+    const b = boxes[to];
+    if (!a || !b) return;
+    const nOut = MAP_EDGES.filter(e => e.from === from).length;
+    const i = seen[from] || 0;
+    seen[from] = i + 1;
+    const spread = (i - (nOut - 1) / 2) * 14;
+    const y1 = a.top + a.h / 2 + spread;
+    const y2 = b.top + b.h / 2;
+    const same = Math.abs(a.left - b.left) < 8;
+    const forward = b.left >= a.left;
+    const x1 = same || forward ? a.left + a.w : a.left;
+    const x2 = same || forward ? b.left : b.left + b.w;
+    let d;
+    if (same) {
+      const bow = 70 + Math.abs(y2 - y1) * 0.12;
+      d = "M " + x1 + " " + y1 + " C " + (x1 + bow) + " " + y1 + ", " + (x1 + bow) + " " + y2 + ", " + (b.left + b.w) + " " + y2;
+    } else {
+      const dx = Math.max(60, Math.abs(x2 - x1) * 0.45);
+      d = "M " + x1 + " " + y1 + " C " + (x1 + (x2 >= x1 ? dx : -dx)) + " " + y1 + ", " + (x2 - (x2 >= x1 ? dx : -dx)) + " " + y2 + ", " + x2 + " " + y2;
+    }
+    const home = list.every(e => e.kind === "home");
+    paths += `<path d="${d}" fill="none" stroke="#38bdf8" stroke-width="1.7" ${home ? 'stroke-dasharray="6 5"' : ""} marker-end="url(#sm-arrow)" opacity="0.9"/>`;
+  });
+  svg.innerHTML = paths;
+}
+function fitScreenMap(){
+  const view = document.getElementById("sm-view");
+  const cols = document.getElementById("sm-cols");
+  const ww = cols.offsetWidth || 1;
+  const wh = cols.offsetHeight || 1;
+  const s = Math.max(0.18, Math.min(0.7, (view.clientWidth - 40) / ww, (view.clientHeight - 40) / wh));
+  smState.scale = s;
+  smState.x = Math.max(12, (view.clientWidth - ww * s) / 2);
+  smState.y = Math.max(12, (view.clientHeight - wh * s) / 2);
+  smApply();
+}
+function openScreenMap(){
+  smState.open = true;
+  const layer = document.getElementById("screen-map");
+  layer.classList.add("open");
+  layer.setAttribute("aria-hidden", "false");
+  buildScreenMap();
+  requestAnimationFrame(() => {
+    smState.scale = 0.82;
+    smState.x = 28;
+    smState.y = 20;
+    smApply();
+    drawScreenLinks();
+  });
+}
+function closeScreenMap(){
+  smState.open = false;
+  const layer = document.getElementById("screen-map");
+  layer.classList.remove("open");
+  layer.setAttribute("aria-hidden", "true");
+}
+function zoomScreenMap(factor){
+  const view = document.getElementById("sm-view");
+  const mx = view.clientWidth / 2;
+  const my = view.clientHeight / 2;
+  const next = Math.min(1.1, Math.max(0.18, smState.scale * factor));
+  const k = next / smState.scale;
+  smState.x = mx - (mx - smState.x) * k;
+  smState.y = my - (my - smState.y) * k;
+  smState.scale = next;
+  smApply();
+}
+function init(){
+  store.deliveredStops = store.deliveredStops || [];
+  store.podTab = store.podTab || "firma";
+  store.ticketLog = store.ticketLog || [];
+  store.photos = store.photos || 0;
+  store.callTries = store.callTries || 1;
+  document.getElementById("roles").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-role]");
+    if (!b) return;
+    state.role = b.dataset.role;
+    render();
+  });
+  document.getElementById("screen-list").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-pick]");
+    if (!b) return;
+    go(b.dataset.pick);
+  });
+  const workspace = document.getElementById("workspace");
+  workspace.addEventListener("click", onClick);
+  workspace.addEventListener("input", onField);
+  workspace.addEventListener("change", onField);
+  document.getElementById("btn-back").addEventListener("click", back);
+  document.getElementById("btn-fwd").addEventListener("click", fwd);
+  document.getElementById("btn-map").addEventListener("click", openFlowMap);
+  document.getElementById("btn-visual").addEventListener("click", openScreenMap);
+  document.getElementById("sm-close").addEventListener("click", closeScreenMap);
+  document.getElementById("sm-fit").addEventListener("click", () => { fitScreenMap(); drawScreenLinks(); });
+  document.getElementById("sm-in").addEventListener("click", () => zoomScreenMap(1.12));
+  document.getElementById("sm-out").addEventListener("click", () => zoomScreenMap(0.88));
+  document.getElementById("sm-cols").addEventListener("click", (e) => {
+    const node = e.target.closest(".sm-node");
+    document.querySelectorAll(".sm-node").forEach(n => n.classList.toggle("on", n === node));
+  });
+  document.getElementById("sm-cols").addEventListener("dblclick", (e) => {
+    const node = e.target.closest(".sm-node");
+    if (!node) return;
+    closeScreenMap();
+    go(node.dataset.id);
+  });
+  const smView = document.getElementById("sm-view");
+  smView.addEventListener("pointerdown", (e) => {
+    if (e.target.closest(".sm-node")) return;
+    smState.drag = { x:e.clientX, y:e.clientY, ox:smState.x, oy:smState.y };
+    smView.classList.add("grabbing");
+    smView.setPointerCapture(e.pointerId);
+  });
+  smView.addEventListener("pointermove", (e) => {
+    if (!smState.drag) return;
+    smState.x = smState.drag.ox + e.clientX - smState.drag.x;
+    smState.y = smState.drag.oy + e.clientY - smState.drag.y;
+    smApply();
+  });
+  smView.addEventListener("pointerup", () => { smState.drag = null; smView.classList.remove("grabbing"); });
+  smView.addEventListener("pointercancel", () => { smState.drag = null; smView.classList.remove("grabbing"); });
+  smView.addEventListener("wheel", (e) => {
+    if (!smState.open) return;
+    e.preventDefault();
+    const rect = smView.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const next = Math.min(1.1, Math.max(0.18, smState.scale * (e.deltaY < 0 ? 1.08 : 0.92)));
+    const k = next / smState.scale;
+    smState.x = mx - (mx - smState.x) * k;
+    smState.y = my - (my - smState.y) * k;
+    smState.scale = next;
+    smApply();
+  }, { passive:false });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && smState.open) closeScreenMap(); });
+  document.getElementById("fm-close").addEventListener("click", closeFlowMap);
+  document.getElementById("fm-fit").addEventListener("click", () => { fitMap(); paintMapNodes(); });
+  document.getElementById("fm-in").addEventListener("click", () => zoomMap(1.12));
+  document.getElementById("fm-out").addEventListener("click", () => zoomMap(0.88));
+  document.getElementById("fm-labels").addEventListener("click", (e) => {
+    mapState.labels = !mapState.labels;
+    e.currentTarget.classList.toggle("on", mapState.labels);
+    paintMapNodes();
+  });
+  document.getElementById("fm-search").addEventListener("input", (e) => {
+    mapState.query = e.target.value;
+    paintMapNodes();
+  });
+  document.getElementById("fm-cols").addEventListener("click", (e) => {
+    const node = e.target.closest(".fm-node");
+    if (!node) return;
+    mapState.selected = node.dataset.id;
+    mapState.edge = null;
+    paintMapNodes();
+  });
+  document.getElementById("fm-cols").addEventListener("dblclick", (e) => {
+    const node = e.target.closest(".fm-node");
+    if (!node) return;
+    closeFlowMap();
+    go(node.dataset.id);
+  });
+  document.getElementById("fm-detail").addEventListener("click", (e) => {
+    if (e.target.closest("#fm-open")) { const id = mapState.selected; closeFlowMap(); go(id); return; }
+    const link = e.target.closest("[data-edge-from]");
+    if (!link) return;
+    const next = { from: link.dataset.edgeFrom, to: link.dataset.edgeTo, label: link.dataset.edgeLabel };
+    const same = mapState.edge && mapState.edge.from === next.from && mapState.edge.to === next.to && mapState.edge.label === next.label;
+    mapState.edge = same ? null : next;
+    paintMapNodes();
+    if (mapState.edge) focusEdge(mapState.edge);
+  });
+  document.getElementById("fm-svg").addEventListener("click", (e) => {
+    const path = e.target.closest("path[data-from]");
+    if (!path) return;
+    const next = { from: path.dataset.from, to: path.dataset.to, label: path.dataset.label };
+    const same = mapState.edge && mapState.edge.from === next.from && mapState.edge.to === next.to;
+    mapState.selected = next.from;
+    mapState.edge = same ? null : next;
+    paintMapNodes();
+    if (mapState.edge) focusEdge(mapState.edge);
+  });
+  const view = document.getElementById("fm-view");
+  view.addEventListener("pointerdown", (e) => {
+    if (e.target.closest(".fm-node") || e.target.closest("path")) return;
+    mapState.drag = { x:e.clientX, y:e.clientY, ox:mapState.x, oy:mapState.y };
+    view.classList.add("grabbing");
+    view.setPointerCapture(e.pointerId);
+  });
+  view.addEventListener("pointermove", (e) => {
+    if (!mapState.drag) return;
+    mapState.x = mapState.drag.ox + e.clientX - mapState.drag.x;
+    mapState.y = mapState.drag.oy + e.clientY - mapState.drag.y;
+    applyMapTransform();
+  });
+  view.addEventListener("pointerup", () => { mapState.drag = null; view.classList.remove("grabbing"); });
+  view.addEventListener("pointercancel", () => { mapState.drag = null; view.classList.remove("grabbing"); });
+  view.addEventListener("wheel", (e) => {
+    if (!mapState.open) return;
+    e.preventDefault();
+    const rect = view.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const next = Math.min(1.7, Math.max(0.28, mapState.scale * (e.deltaY < 0 ? 1.08 : 0.92)));
+    const k = next / mapState.scale;
+    mapState.x = mx - (mx - mapState.x) * k;
+    mapState.y = my - (my - mapState.y) * k;
+    mapState.scale = next;
+    applyMapTransform();
+  }, { passive:false });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && mapState.open) closeFlowMap(); });
+  window.addEventListener("resize", fitPhone);
+  workspace.addEventListener("dragover", (e) => { if (e.target.closest("#drop")) e.preventDefault(); });
+  workspace.addEventListener("drop", (e) => {
+    if (!e.target.closest("#drop")) return;
+    e.preventDefault();
+    store.preview = true;
+    toast("Archivo recibido. Revisa válidos y errores.");
+    render();
+  });
+  window.addEventListener("error", (ev) => {
+    const box = document.getElementById("js-error");
+    if (box) box.textContent = ev.message || "Error de script";
+  });
+  setInterval(tickShift, 1000);
+  const missing = [];
+  for (let i = 1; i <= 38; i++) {
+    const sid = "UI-" + String(i).padStart(3, "0");
+    if (typeof renderers[sid] !== "function") missing.push(sid);
+  }
+  if (missing.length) document.getElementById("js-error").textContent = "Faltan pantallas: " + missing.join(", ");
+  render();
+}
+init();
+</script>
+</body>
+</html>
